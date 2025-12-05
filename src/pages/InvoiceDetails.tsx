@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, CheckCircle, Download, Plus, Edit, Archive, Check, ExternalLink, DollarSign, Calendar, FileText, User, Mail, ListChecks, Clock } from "lucide-react";
+import { CheckCircle, Plus, Edit, Archive, Check, ExternalLink, DollarSign, Calendar, FileText, User, Mail, ListChecks, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
@@ -692,30 +692,9 @@ export default function InvoiceDetails() {
         variant: "outline",
       });
       
-      // For AP invoices, go directly to approved. For AR invoices, send to customer first
-      if (isAPInvoice) {
-        primaryActions.push({
-          label: "Approve",
-          icon: <CheckCircle className="h-4 w-4" />,
-          onClick: () => updateStatusMutation.mutate("approved"),
-          variant: "default",
-        });
-      } else {
-        primaryActions.push({
-          label: "Send to Customer",
-          icon: <Send className="h-4 w-4" />,
-          onClick: () => updateStatusMutation.mutate("sent"),
-          variant: "default",
-        });
-      }
-    } else if (invoice.status === "sent") {
+      // Go directly to approved for both AP and AR invoices
       primaryActions.push({
-        label: "Back to Draft",
-        onClick: () => updateStatusMutation.mutate("draft"),
-        variant: "outline",
-      });
-      primaryActions.push({
-        label: "Mark as Approved",
+        label: "Approve",
         icon: <CheckCircle className="h-4 w-4" />,
         onClick: () => updateStatusMutation.mutate("approved"),
         variant: "default",
@@ -724,18 +703,11 @@ export default function InvoiceDetails() {
       // Only allow unapprove if not yet synced to Acumatica
       primaryActions.push({
         label: "Unapprove",
-        onClick: () => updateStatusMutation.mutate(isAPInvoice ? "draft" : "sent"),
+        onClick: () => updateStatusMutation.mutate("draft"),
         variant: "outline",
       });
     }
   }
-
-  primaryActions.push({
-    label: "Download PDF",
-    icon: <Download className="h-4 w-4" />,
-    onClick: () => {},
-    variant: "outline",
-  });
 
   // Only show archive button if invoice is draft
   if (invoice.status === "draft") {
