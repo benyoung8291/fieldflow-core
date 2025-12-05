@@ -82,7 +82,18 @@ serve(async (req) => {
 
     const acumatica_password = password;
 
-    const { forceRefresh } = await req.json();
+    // Parse request body safely - handle empty or missing body
+    let forceRefresh = false;
+    try {
+      const body = await req.text();
+      if (body && body.trim()) {
+        const parsed = JSON.parse(body);
+        forceRefresh = parsed.forceRefresh || false;
+      }
+    } catch (parseError) {
+      console.log("No request body or invalid JSON, using defaults");
+    }
+
     const instanceUrl = acumatica_instance_url;
     const companyName = acumatica_company_name;
     
