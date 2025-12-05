@@ -47,7 +47,7 @@ export default function APInvoiceDetails() {
       
       const { data, error } = await supabase
         .from("accounting_integrations")
-        .select("acumatica_instance_url")
+        .select("acumatica_instance_url, acumatica_company_name")
         .eq("tenant_id", invoice.tenant_id)
         .eq("provider", "myob_acumatica")
         .eq("is_enabled", true)
@@ -144,7 +144,7 @@ export default function APInvoiceDetails() {
               <div className="text-sm text-muted-foreground mt-1">
                 {accountingIntegration?.acumatica_instance_url ? (
                   <a
-                    href={`${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AP301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`}
+                    href={`${accountingIntegration.acumatica_instance_url}/(W(12))/Main?CompanyID=${encodeURIComponent(accountingIntegration.acumatica_company_name || '')}&ScreenId=AP301000&DocType=BL&RefNbr=${invoice.acumatica_reference_nbr}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-primary hover:underline"

@@ -81,7 +81,7 @@ export default function InvoiceDetails() {
       
       const { data, error } = await supabase
         .from("accounting_integrations")
-        .select("acumatica_instance_url")
+        .select("acumatica_instance_url, acumatica_company_name")
         .eq("tenant_id", invoice.tenant_id)
         .eq("provider", "myob_acumatica")
         .eq("is_enabled", true)
@@ -762,7 +762,7 @@ export default function InvoiceDetails() {
                   <>
                     <br />
                     <a
-                      href={`${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AR301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`}
+                      href={`${accountingIntegration.acumatica_instance_url}/(W(12))/Main?CompanyID=${encodeURIComponent(accountingIntegration.acumatica_company_name || '')}&ScreenId=AR301000&DocType=INV&RefNbr=${invoice.acumatica_reference_nbr}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-primary hover:underline mt-1"
@@ -792,8 +792,8 @@ export default function InvoiceDetails() {
                     href={
                       // @ts-ignore - invoice_type exists
                       invoice.invoice_type === 'ap'
-                        ? `${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AP301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`
-                        : `${accountingIntegration.acumatica_instance_url}/Main?ScreenId=AR301000&ReferenceNbr=${invoice.acumatica_reference_nbr}`
+                        ? `${accountingIntegration.acumatica_instance_url}/(W(12))/Main?CompanyID=${encodeURIComponent(accountingIntegration.acumatica_company_name || '')}&ScreenId=AP301000&DocType=BL&RefNbr=${invoice.acumatica_reference_nbr}`
+                        : `${accountingIntegration.acumatica_instance_url}/(W(12))/Main?CompanyID=${encodeURIComponent(accountingIntegration.acumatica_company_name || '')}&ScreenId=AR301000&DocType=INV&RefNbr=${invoice.acumatica_reference_nbr}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
