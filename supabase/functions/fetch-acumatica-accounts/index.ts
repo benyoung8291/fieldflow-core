@@ -118,6 +118,9 @@ serve(async (req) => {
         console.log(`Using cached data: ${cachedAccounts.length} accounts, ${cachedSubAccounts?.length || 0} sub-accounts`);
         return new Response(
           JSON.stringify({ 
+            success: true,
+            accountCount: cachedAccounts.length,
+            subAccountCount: cachedSubAccounts?.length || 0,
             accounts: cachedAccounts.map(a => ({
               AccountCD: { value: a.account_code },
               Description: { value: a.description },
@@ -274,7 +277,9 @@ serve(async (req) => {
         console.warn("Failed to fetch sub-accounts:", subAccountsResponse.status);
       }
 
-      console.log(`Fetched ${accountsData.value?.length || 0} accounts and ${subAccounts.length} sub-accounts`);
+      // accounts variable is defined later, so use accountsData here
+      const fetchedAccounts = accountsData.value || accountsData;
+      console.log(`Fetched ${fetchedAccounts?.length || 0} accounts and ${subAccounts.length} sub-accounts`);
 
       // Cache the data
       const accounts = accountsData.value || accountsData;
@@ -324,6 +329,9 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
+          success: true,
+          accountCount: accounts?.length || 0,
+          subAccountCount: subAccounts?.length || 0,
           accounts: accounts,
           subAccounts: subAccounts
         }),
