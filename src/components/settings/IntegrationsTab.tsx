@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Key, CheckCircle2, Edit2, Shield } from "lucide-react";
+import { Loader2, Key, CheckCircle2, Edit2, Shield, RefreshCw, Zap } from "lucide-react";
 import { ChartOfAccountsSelector } from "@/components/expenses/ChartOfAccountsSelector";
 
 export default function IntegrationsTab() {
@@ -24,6 +24,8 @@ export default function IntegrationsTab() {
   const [acumaticaDefaultSalesSubAccount, setAcumaticaDefaultSalesSubAccount] = useState("");
   const [acumaticaHasEncryptedCredentials, setAcumaticaHasEncryptedCredentials] = useState(false);
   const [updatingAcumaticaCredentials, setUpdatingAcumaticaCredentials] = useState(false);
+  const [testingAcumaticaConnection, setTestingAcumaticaConnection] = useState(false);
+  const [refreshingAcumaticaAccounts, setRefreshingAcumaticaAccounts] = useState(false);
   
   const [xeroEnabled, setXeroEnabled] = useState(false);
   const [xeroTenantId, setXeroTenantId] = useState("");
@@ -38,6 +40,35 @@ export default function IntegrationsTab() {
   const [showTenantSelector, setShowTenantSelector] = useState(false);
   const [availableTenants, setAvailableTenants] = useState<Array<{tenantId: string, tenantName: string, tenantType: string}>>([]);
 
+  // Fetch chart of accounts cache info
+  const { data: accountsCache } = useQuery({
+    queryKey: ["chart-of-accounts-cache-info"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.tenant_id) return null;
+
+      const { data, error } = await supabase
+        .from("chart_of_accounts_cache")
+        .select("cached_at")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("provider", "myob_acumatica")
+        .order("cached_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) return null;
+      return data;
+    },
+  });
+
   const { data: integrations, isLoading } = useQuery({
     queryKey: ["accounting-integrations"],
     queryFn: async () => {
@@ -51,65 +82,71 @@ export default function IntegrationsTab() {
       }
       
       console.log("Fetched integrations:", data);
-
-      // Populate form with existing data
-      const acumatica = data.find((i) => i.provider === "myob_acumatica");
-      if (acumatica) {
-        setAcumaticaEnabled(acumatica.is_enabled);
-        setAcumaticaUrl(acumatica.acumatica_instance_url || "");
-        setAcumaticaCompany(acumatica.acumatica_company_name || "");
-        
-        // Check if credentials are encrypted
-        const hasEncryptedUsername = acumatica.acumatica_username === "[ENCRYPTED]";
-        const hasEncryptedPassword = acumatica.acumatica_password === "[ENCRYPTED]";
-        const hasEncryptedCreds = hasEncryptedUsername || hasEncryptedPassword;
-        
-        setAcumaticaHasEncryptedCredentials(hasEncryptedCreds);
-        setAcumaticaUsername(hasEncryptedCreds ? "" : acumatica.acumatica_username || "");
-        setAcumaticaPassword(hasEncryptedCreds ? "" : acumatica.acumatica_password || "");
-        setAcumaticaDefaultSalesAccount(acumatica.default_sales_account_code || "");
-        setAcumaticaDefaultSalesSubAccount(acumatica.default_sales_sub_account || "");
-      }
-
-      const xero = data.find((i) => i.provider === "xero");
-      console.log("Found Xero integration:", xero);
-      if (xero) {
-        setXeroEnabled(xero.is_enabled);
-        setXeroTenantId(xero.xero_tenant_id || "");
-        setXeroIntegrationId(xero.id);
-        
-        // Check if credentials are encrypted
-        const hasEncryptedClientId = xero.xero_client_id === "[ENCRYPTED]";
-        const hasEncryptedClientSecret = xero.xero_client_secret === "[ENCRYPTED]";
-        const hasEncryptedCreds = hasEncryptedClientId || hasEncryptedClientSecret;
-        
-        setXeroHasEncryptedCredentials(hasEncryptedCreds);
-        setXeroClientId(hasEncryptedCreds ? "" : xero.xero_client_id || "");
-        setXeroClientSecret(hasEncryptedCreds ? "" : xero.xero_client_secret || "");
-        
-        const hasRefreshToken = !!xero.xero_refresh_token;
-        const hasTenantId = !!xero.xero_tenant_id;
-        const isFullyConnected = hasRefreshToken && hasTenantId;
-        
-        setXeroConnected(isFullyConnected);
-        
-        console.log("Xero connection status:", { 
-          hasRefreshToken, 
-          hasTenantId,
-          tenantId: xero.xero_tenant_id,
-          isFullyConnected 
-        });
-        
-        // If we have a refresh token but no tenant ID, show tenant selector
-        if (hasRefreshToken && !hasTenantId) {
-          // Fetch available organizations
-          fetchXeroOrganizations();
-        }
-      }
-
       return data;
     },
   });
+
+  // Use useEffect to properly sync state with fetched data
+  useEffect(() => {
+    if (!integrations) return;
+
+    const acumatica = integrations.find((i) => i.provider === "myob_acumatica");
+    if (acumatica) {
+      setAcumaticaEnabled(acumatica.is_enabled);
+      setAcumaticaUrl(acumatica.acumatica_instance_url || "");
+      setAcumaticaCompany(acumatica.acumatica_company_name || "");
+      
+      // Check if credentials are encrypted - password marker or username present indicates configured
+      const hasEncryptedPassword = acumatica.acumatica_password === "[ENCRYPTED]";
+      const hasUsername = !!acumatica.acumatica_username && acumatica.acumatica_username !== "[ENCRYPTED]";
+      const hasEncryptedCreds = hasEncryptedPassword || hasUsername;
+      
+      setAcumaticaHasEncryptedCredentials(hasEncryptedCreds);
+      setAcumaticaDefaultSalesAccount(acumatica.default_sales_account_code || "");
+      setAcumaticaDefaultSalesSubAccount(acumatica.default_sales_sub_account || "");
+      
+      // Clear credential fields when we have encrypted creds
+      if (hasEncryptedCreds && !updatingAcumaticaCredentials) {
+        setAcumaticaUsername("");
+        setAcumaticaPassword("");
+      }
+    }
+
+    const xero = integrations.find((i) => i.provider === "xero");
+    console.log("Found Xero integration:", xero);
+    if (xero) {
+      setXeroEnabled(xero.is_enabled);
+      setXeroTenantId(xero.xero_tenant_id || "");
+      setXeroIntegrationId(xero.id);
+      
+      // Check if credentials are encrypted
+      const hasEncryptedClientId = xero.xero_client_id === "[ENCRYPTED]";
+      const hasEncryptedClientSecret = xero.xero_client_secret === "[ENCRYPTED]";
+      const hasEncryptedCreds = hasEncryptedClientId || hasEncryptedClientSecret;
+      
+      setXeroHasEncryptedCredentials(hasEncryptedCreds);
+      setXeroClientId(hasEncryptedCreds ? "" : xero.xero_client_id || "");
+      setXeroClientSecret(hasEncryptedCreds ? "" : xero.xero_client_secret || "");
+      
+      const hasRefreshToken = !!xero.xero_refresh_token;
+      const hasTenantId = !!xero.xero_tenant_id;
+      const isFullyConnected = hasRefreshToken && hasTenantId;
+      
+      setXeroConnected(isFullyConnected);
+      
+      console.log("Xero connection status:", { 
+        hasRefreshToken, 
+        hasTenantId,
+        tenantId: xero.xero_tenant_id,
+        isFullyConnected 
+      });
+      
+      // If we have a refresh token but no tenant ID, show tenant selector
+      if (hasRefreshToken && !hasTenantId) {
+        fetchXeroOrganizations();
+      }
+    }
+  }, [integrations, updatingAcumaticaCredentials]);
 
   const fetchXeroOrganizations = async () => {
     try {
@@ -134,6 +171,59 @@ export default function IntegrationsTab() {
     } catch (error) {
       console.error("Error fetching organizations:", error);
       toast.error("Failed to fetch organizations");
+    }
+  };
+
+  const testAcumaticaConnection = async () => {
+    setTestingAcumaticaConnection(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-acumatica-connection`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(result.message || "Connection successful!");
+      } else {
+        toast.error(result.error || "Connection test failed");
+      }
+    } catch (error) {
+      console.error("Connection test error:", error);
+      toast.error("Failed to test connection");
+    } finally {
+      setTestingAcumaticaConnection(false);
+    }
+  };
+
+  const refreshAcumaticaChartOfAccounts = async () => {
+    setRefreshingAcumaticaAccounts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-acumatica-accounts");
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast.success(`Refreshed ${data.accountCount || 0} accounts and ${data.subAccountCount || 0} sub-accounts`);
+        queryClient.invalidateQueries({ queryKey: ["chart-of-accounts-cache-info"] });
+        queryClient.invalidateQueries({ queryKey: ["chart-of-accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["sub-accounts"] });
+      } else {
+        toast.error(data?.error || "Failed to refresh chart of accounts");
+      }
+    } catch (error) {
+      console.error("Error refreshing chart of accounts:", error);
+      toast.error("Failed to refresh chart of accounts");
+    } finally {
+      setRefreshingAcumaticaAccounts(false);
     }
   };
 
@@ -376,13 +466,15 @@ export default function IntegrationsTab() {
         );
 
         if (!credentialsResponse.ok) {
-          const errorText = await credentialsResponse.text();
-          console.error("Failed to save credentials:", errorText);
-          throw new Error("Failed to save credentials");
+          const errorData = await credentialsResponse.json();
+          console.error("Failed to save credentials:", errorData);
+          throw new Error(errorData.error || "Failed to save credentials");
         }
 
+        // Clear credential fields after successful save
         setAcumaticaUsername("");
         setAcumaticaPassword("");
+        setUpdatingAcumaticaCredentials(false);
       }
     },
     onSuccess: () => {
@@ -626,8 +718,38 @@ export default function IntegrationsTab() {
               <p className="text-sm text-muted-foreground">Enable Acumatica integration to configure default accounts</p>
             )}
           </div>
+
+          {/* Chart of Accounts Cache Info */}
+          {acumaticaEnabled && (
+            <div className="rounded-md border p-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Chart of Accounts Cache</p>
+                  <p className="text-xs text-muted-foreground">
+                    {accountsCache?.cached_at 
+                      ? `Last refreshed: ${new Date(accountsCache.cached_at).toLocaleDateString()} ${new Date(accountsCache.cached_at).toLocaleTimeString()}`
+                      : "Not yet cached"
+                    }
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshAcumaticaChartOfAccounts}
+                  disabled={refreshingAcumaticaAccounts || !acumaticaHasEncryptedCredentials}
+                >
+                  {refreshingAcumaticaAccounts ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  <span className="ml-1">Refresh</span>
+                </Button>
+              </div>
+            </div>
+          )}
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               onClick={() => saveAcumaticaMutation.mutate()}
               disabled={saveAcumaticaMutation.isPending || !acumaticaEnabled}
@@ -635,6 +757,20 @@ export default function IntegrationsTab() {
               {saveAcumaticaMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Settings
             </Button>
+            {acumaticaEnabled && acumaticaHasEncryptedCredentials && (
+              <Button
+                variant="outline"
+                onClick={testAcumaticaConnection}
+                disabled={testingAcumaticaConnection}
+              >
+                {testingAcumaticaConnection ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4 mr-2" />
+                )}
+                Test Connection
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

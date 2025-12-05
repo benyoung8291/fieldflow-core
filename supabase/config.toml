@@ -122,3 +122,9 @@ verify_jwt = false
 
 [functions.send-push-notification]
 verify_jwt = true
+
+[functions.test-acumatica-connection]
+verify_jwt = true
+
+[functions.set-acumatica-credentials]
+verify_jwt = true
