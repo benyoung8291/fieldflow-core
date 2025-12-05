@@ -239,10 +239,11 @@ serve(async (req) => {
       const billId = acumaticaData.id;
       const billReferenceNbr = acumaticaData.ReferenceNbr?.value;
 
-      // Update invoice with Acumatica references and set to approved
+      // Update invoice with Acumatica references, align invoice_number, and set to approved
       const { error: updateError } = await supabase
         .from('ap_invoices')
         .update({
+          invoice_number: billReferenceNbr, // Align with Acumatica number
           acumatica_invoice_id: billId,
           acumatica_reference_nbr: billReferenceNbr,
           sync_status: 'synced',
