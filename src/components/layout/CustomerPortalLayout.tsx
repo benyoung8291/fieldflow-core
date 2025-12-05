@@ -95,7 +95,7 @@ export function CustomerPortalLayout({ children, fullWidth = false }: CustomerPo
       </main>
 
       {/* iOS-inspired Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 pb-safe md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background shadow-lg pb-safe md:hidden">
         <div className="flex items-center justify-around h-20 px-4">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path || 
