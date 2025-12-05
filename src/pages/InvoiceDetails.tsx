@@ -55,12 +55,6 @@ export default function InvoiceDetails() {
             name,
             email,
             billing_address
-          ),
-          suppliers (
-            id,
-            name,
-            email,
-            acumatica_supplier_id
           )
         `)
         .eq("id", id)

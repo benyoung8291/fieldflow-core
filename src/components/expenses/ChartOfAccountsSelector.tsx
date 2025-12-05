@@ -10,6 +10,7 @@ interface ChartOfAccountsSelectorProps {
   subAccount?: string;
   onAccountChange: (accountCode: string) => void;
   onSubAccountChange?: (subAccount: string) => void;
+  accountTypeFilter?: string; // Filter by account type: "Expense", "Income", etc.
 }
 
 export function ChartOfAccountsSelector({
@@ -17,6 +18,7 @@ export function ChartOfAccountsSelector({
   subAccount,
   onAccountChange,
   onSubAccountChange,
+  accountTypeFilter,
 }: ChartOfAccountsSelectorProps) {
   const [provider, setProvider] = useState<string | null>(null);
   const [instanceUrl, setInstanceUrl] = useState<string | null>(null);
@@ -67,9 +69,9 @@ export function ChartOfAccountsSelector({
 
   // Fetch chart of accounts - from cache first, then API if needed
   const { data: accountsData, isLoading } = useQuery({
-    queryKey: ["chart-of-accounts", provider, instanceUrl, companyName, xeroTenantId],
+    queryKey: ["chart-of-accounts", provider, instanceUrl, companyName, xeroTenantId, accountTypeFilter],
     queryFn: async () => {
-      console.log('📊 Query running with:', { provider, instanceUrl, companyName, xeroTenantId });
+      console.log('📊 Query running with:', { provider, instanceUrl, companyName, xeroTenantId, accountTypeFilter });
       if (!provider) return null;
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -84,12 +86,19 @@ export function ChartOfAccountsSelector({
       if (!profile?.tenant_id) return null;
 
       // Try to get from cache first (less than 24 hours old)
-      const { data: cachedAccounts } = await supabase
+      let accountsQuery = supabase
         .from("chart_of_accounts_cache")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
         .eq("provider", provider)
         .gte("cached_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      // Apply account type filter if provided
+      if (accountTypeFilter) {
+        accountsQuery = accountsQuery.eq("account_type", accountTypeFilter);
+      }
+
+      const { data: cachedAccounts } = await accountsQuery;
 
       let cachedSubAccounts = null;
       if (provider === "myob_acumatica") {
@@ -156,6 +165,13 @@ export function ChartOfAccountsSelector({
           console.log("📋 Sample sub-account from API:", data.subAccounts[0]);
         }
         
+        // Apply client-side filter if accountTypeFilter is set
+        if (accountTypeFilter && data?.accounts) {
+          data.accounts = data.accounts.filter((a: any) => 
+            a.Type?.value === accountTypeFilter || a.account_type === accountTypeFilter
+          );
+        }
+        
         return data;
       } else if (provider === "xero") {
         if (!xeroTenantId) {
@@ -200,6 +216,7 @@ export function ChartOfAccountsSelector({
   console.log("  - Sub-accounts available:", subAccounts.length);
   console.log("  - Selected account:", accountCode);
   console.log("  - Selected sub-account:", subAccount);
+  console.log("  - Account type filter:", accountTypeFilter);
   
   if (subAccounts.length > 0) {
     console.log("  - Sample sub-account:", subAccounts[0]);

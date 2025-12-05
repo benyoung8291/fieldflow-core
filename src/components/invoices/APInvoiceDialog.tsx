@@ -636,6 +636,7 @@ export default function APInvoiceDialog({
                           subAccount={item.sub_account}
                           onAccountChange={(code) => updateLineItem(index, 'account_code', code)}
                           onSubAccountChange={(sub) => updateLineItem(index, 'sub_account', sub)}
+                          accountTypeFilter="Expense"
                         />
                       </div>
                     ))}
