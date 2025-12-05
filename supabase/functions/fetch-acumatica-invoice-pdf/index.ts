@@ -95,9 +95,13 @@ serve(async (req) => {
       throw new Error("Failed to authenticate with Acumatica");
     }
 
-    // Extract session cookies
-    const cookies = loginResponse.headers.get("set-cookie");
-    console.log("Acumatica login successful");
+    // Extract ALL session cookies properly using getSetCookie()
+    const setCookieHeaders = loginResponse.headers.getSetCookie();
+    const cookies = setCookieHeaders
+      .map(cookie => cookie.split(';')[0]) // Get just the cookie name=value part
+      .join('; ');
+    
+    console.log(`Acumatica login successful, got ${setCookieHeaders.length} cookies`);
 
     // Determine the report parameters based on invoice type
     // AR641000 = AR Invoice/Memo report
