@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle, Plus, Edit, Archive, Check, ExternalLink, DollarSign, Calendar, FileText, User, Mail, ListChecks, Clock } from "lucide-react";
+import { CheckCircle, Plus, Edit, Archive, Check, ExternalLink, DollarSign, Calendar, FileText, User, Mail, ListChecks, Clock, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import EditInvoiceLineDialog from "@/components/invoices/EditInvoiceLineDialog";
@@ -42,6 +42,7 @@ export default function InvoiceDetails() {
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [deleteInvoiceDialogOpen, setDeleteInvoiceDialogOpen] = useState(false);
+  const [fetchingPdf, setFetchingPdf] = useState(false);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
@@ -262,6 +263,36 @@ export default function InvoiceDetails() {
         toast.dismiss("invoice-sync");
       }
       toast.error(error.message || "Failed to update invoice status");
+    },
+  });
+
+  const fetchPdfMutation = useMutation({
+    mutationFn: async () => {
+      setFetchingPdf(true);
+      // @ts-ignore - invoice_type exists on the invoice object
+      const invoiceType = invoice?.invoice_type === 'ap' ? "ap" : "ar";
+      const { data, error } = await supabase.functions.invoke("fetch-acumatica-invoice-pdf", {
+        body: { 
+          invoice_id: id,
+          invoice_type: invoiceType
+        },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || "Failed to fetch PDF");
+      return data;
+    },
+    onSuccess: (data) => {
+      setFetchingPdf(false);
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      toast.success("PDF retrieved from Acumatica");
+      // Open the PDF in a new tab
+      if (data.pdf_url) {
+        window.open(data.pdf_url, "_blank");
+      }
+    },
+    onError: (error: any) => {
+      setFetchingPdf(false);
+      toast.error(error.message || "Failed to fetch PDF from Acumatica");
     },
   });
 
@@ -715,6 +746,35 @@ export default function InvoiceDetails() {
       label: "Archive",
       icon: <Archive className="h-4 w-4" />,
       onClick: () => setDeleteInvoiceDialogOpen(true),
+      variant: "outline",
+    });
+  }
+
+  // PDF download button - show if invoice has been synced to Acumatica
+  // @ts-ignore - pdf_url may exist
+  if (invoice.pdf_url) {
+    // PDF already fetched - show direct download
+    primaryActions.push({
+      label: "Download PDF",
+      icon: <Download className="h-4 w-4" />,
+      // @ts-ignore - pdf_url exists
+      onClick: () => window.open(invoice.pdf_url, "_blank"),
+      variant: "outline",
+    });
+  } else if (invoice.acumatica_reference_nbr && !fetchingPdf) {
+    // Invoice synced but PDF not yet fetched - show fetch button
+    primaryActions.push({
+      label: "Get PDF from Acumatica",
+      icon: <Download className="h-4 w-4" />,
+      onClick: () => fetchPdfMutation.mutate(),
+      variant: "outline",
+    });
+  } else if (invoice.acumatica_reference_nbr && fetchingPdf) {
+    // Currently fetching PDF
+    primaryActions.push({
+      label: "Fetching PDF...",
+      icon: <Loader2 className="h-4 w-4 animate-spin" />,
+      onClick: () => {},
       variant: "outline",
     });
   }

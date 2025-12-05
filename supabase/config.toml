@@ -128,3 +128,6 @@ verify_jwt = true
 
 [functions.set-acumatica-credentials]
 verify_jwt = true
+
+[functions.fetch-acumatica-invoice-pdf]
+verify_jwt = true

@@ -254,6 +254,7 @@ export type Database = {
           manager_approved_at: string | null
           manager_approved_by: string | null
           notes: string | null
+          pdf_url: string | null
           project_id: string | null
           purchase_receipt_id: string | null
           requires_manager_approval: boolean | null
@@ -288,6 +289,7 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           notes?: string | null
+          pdf_url?: string | null
           project_id?: string | null
           purchase_receipt_id?: string | null
           requires_manager_approval?: boolean | null
@@ -322,6 +324,7 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           notes?: string | null
+          pdf_url?: string | null
           project_id?: string | null
           purchase_receipt_id?: string | null
           requires_manager_approval?: boolean | null
@@ -3611,6 +3614,7 @@ export type Database = {
           manager_approved_at: string | null
           manager_approved_by: string | null
           notes: string | null
+          pdf_url: string | null
           project_id: string | null
           recurring_invoice_id: string | null
           requires_manager_approval: boolean | null
@@ -3646,6 +3650,7 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           notes?: string | null
+          pdf_url?: string | null
           project_id?: string | null
           recurring_invoice_id?: string | null
           requires_manager_approval?: boolean | null
@@ -3681,6 +3686,7 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           notes?: string | null
+          pdf_url?: string | null
           project_id?: string | null
           recurring_invoice_id?: string | null
           requires_manager_approval?: boolean | null
