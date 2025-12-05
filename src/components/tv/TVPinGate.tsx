@@ -19,9 +19,16 @@ export function TVPinGate({ children }: TVPinGateProps) {
 
   // Check for existing session on mount
   useEffect(() => {
-    const session = localStorage.getItem(TV_SESSION_KEY);
-    if (session === "valid") {
-      setIsValidated(true);
+    try {
+      const session = localStorage.getItem(TV_SESSION_KEY);
+      if (session) {
+        const parsed = JSON.parse(session);
+        if (parsed.valid && parsed.pin) {
+          setIsValidated(true);
+        }
+      }
+    } catch {
+      // Invalid session, require re-authentication
     }
     setIsLoading(false);
   }, []);
@@ -47,7 +54,8 @@ export function TVPinGate({ children }: TVPinGateProps) {
       }
 
       if (data?.valid) {
-        localStorage.setItem(TV_SESSION_KEY, "valid");
+        // Store both validation status and PIN for subsequent API calls
+        localStorage.setItem(TV_SESSION_KEY, JSON.stringify({ valid: true, pin }));
         setIsValidated(true);
       } else {
         setError("Invalid PIN. Please try again.");

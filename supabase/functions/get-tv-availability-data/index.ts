@@ -12,8 +12,28 @@ serve(async (req) => {
   }
 
   try {
+    // Validate PIN before returning any data
+    const { pin } = await req.json();
+    const correctPin = Deno.env.get('TV_DASHBOARD_PIN');
+    
+    if (!correctPin) {
+      console.error('TV_DASHBOARD_PIN not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (pin !== correctPin) {
+      console.warn('Invalid PIN attempt for TV availability data');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     
     // Use service role client to bypass RLS
     const supabase = createClient(supabaseUrl, supabaseServiceKey);

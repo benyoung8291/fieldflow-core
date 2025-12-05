@@ -67,11 +67,32 @@ function calculateHoursFromSchedule(startTime: string | null, endTime: string | 
 export function useTVAvailabilityData() {
   const today = startOfDay(new Date());
 
+  // Get PIN from localStorage (stored by TVPinGate)
+  const getStoredPin = (): string | null => {
+    try {
+      const session = localStorage.getItem('tv_dashboard_session');
+      if (session) {
+        const parsed = JSON.parse(session);
+        return parsed.pin || null;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
   // Fetch all data from edge function
   const { data: apiData, isLoading, isError } = useQuery({
     queryKey: ["tv-availability-data"],
     queryFn: async (): Promise<TVAvailabilityResponse> => {
-      const { data, error } = await supabase.functions.invoke("get-tv-availability-data");
+      const pin = getStoredPin();
+      if (!pin) {
+        throw new Error("No PIN available");
+      }
+      
+      const { data, error } = await supabase.functions.invoke("get-tv-availability-data", {
+        body: { pin }
+      });
       
       if (error) {
         console.error("Error fetching TV availability data:", error);
