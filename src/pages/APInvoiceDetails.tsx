@@ -11,7 +11,9 @@ import {
   CheckCircle2,
   ArrowLeft,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Download,
+  Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,7 @@ export default function APInvoiceDetails() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [fetchingPdf, setFetchingPdf] = useState(false);
 
   const { data: invoice, isLoading } = useAPInvoice(id);
   const { data: lineItems } = useAPInvoiceLineItems(id);
@@ -86,6 +89,30 @@ export default function APInvoiceDetails() {
     });
   };
 
+  const handleFetchPdf = async () => {
+    setFetchingPdf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-acumatica-invoice-pdf", {
+        body: { 
+          invoice_id: id,
+          invoice_type: "ap"
+        },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || "Failed to fetch PDF");
+      
+      queryClient.invalidateQueries({ queryKey: ["ap-invoice", id] });
+      toast.success("PDF retrieved from Acumatica");
+      if (data.pdf_url) {
+        window.open(data.pdf_url, "_blank");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch PDF from Acumatica");
+    } finally {
+      setFetchingPdf(false);
+    }
+  };
+
   if (isLoading || !invoice) {
     return (
       <DocumentDetailLayout
@@ -130,6 +157,27 @@ export default function APInvoiceDetails() {
       label: "Delete",
       onClick: () => setDeleteDialogOpen(true),
       variant: "destructive" as const
+    }] : []),
+    // PDF download - show if invoice has pdf_url
+    // @ts-ignore - pdf_url may exist on invoice
+    ...(invoice.pdf_url ? [{
+      label: "Download PDF",
+      icon: <Download className="h-4 w-4" />,
+      // @ts-ignore - pdf_url exists
+      onClick: () => window.open(invoice.pdf_url, "_blank"),
+      variant: "outline" as const
+    }] : isSynced && !fetchingPdf ? [{
+      // Invoice synced but PDF not yet fetched
+      label: "Get PDF from Acumatica",
+      icon: <Download className="h-4 w-4" />,
+      onClick: handleFetchPdf,
+      variant: "outline" as const
+    }] : isSynced && fetchingPdf ? [{
+      // Currently fetching PDF
+      label: "Fetching PDF...",
+      icon: <Loader2 className="h-4 w-4 animate-spin" />,
+      onClick: () => {},
+      variant: "outline" as const
     }] : []),
   ];
 
