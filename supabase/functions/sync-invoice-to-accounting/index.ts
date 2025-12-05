@@ -75,16 +75,21 @@ serve(async (req) => {
         if (integration.provider === "myob_acumatica") {
           result = await syncToAcumatica(invoice, integration);
           
-          // Update invoice with Acumatica details
-          await supabaseClient
-            .from("invoices")
-            .update({
-              acumatica_invoice_id: result.acumatica_invoice_id,
-              acumatica_reference_nbr: result.acumatica_reference_nbr,
-              acumatica_status: result.acumatica_status,
-              synced_to_accounting_at: new Date().toISOString(),
-            })
-            .eq("id", invoice_id);
+          // Skip update if already synced (duplicate prevention returned early)
+          if (!result.already_synced) {
+            // Update invoice with Acumatica details
+            await supabaseClient
+              .from("invoices")
+              .update({
+                acumatica_invoice_id: result.acumatica_invoice_id,
+                acumatica_reference_nbr: result.acumatica_reference_nbr,
+                acumatica_status: result.acumatica_status,
+                synced_to_accounting_at: new Date().toISOString(),
+                sync_status: 'synced',
+                sync_error: null,
+              })
+              .eq("id", invoice_id);
+          }
         } else if (integration.provider === "xero") {
           result = await syncToXero(invoice, integration);
         }
@@ -95,14 +100,14 @@ serve(async (req) => {
           integration_id: integration.id,
           invoice_id: invoice.id,
           sync_type: "invoice",
-          status: "success",
+          status: result?.already_synced ? "skipped" : "success",
           external_reference: result?.external_id,
           response_data: result,
         });
 
         syncResults.push({
           provider: integration.provider,
-          status: "success",
+          status: result?.already_synced ? "already_synced" : "success",
           external_id: result?.external_id,
           ...(result?.acumatica_invoice_id && {
             acumatica_invoice_id: result.acumatica_invoice_id,
@@ -110,6 +115,15 @@ serve(async (req) => {
           }),
         });
       } catch (error) {
+        // Update invoice with error status
+        await supabaseClient
+          .from("invoices")
+          .update({
+            sync_status: 'failed',
+            sync_error: error instanceof Error ? error.message : String(error),
+          })
+          .eq("id", invoice_id);
+
         // Log failed sync
         await supabaseClient.from("integration_sync_logs").insert({
           tenant_id: profile.tenant_id,
@@ -152,6 +166,18 @@ async function syncToAcumatica(invoice: any, integration: any) {
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
+
+  // DUPLICATE PREVENTION: Check if invoice already synced
+  if (invoice.acumatica_reference_nbr) {
+    console.log('Invoice already synced to Acumatica:', invoice.acumatica_reference_nbr);
+    return {
+      external_id: invoice.acumatica_reference_nbr,
+      acumatica_invoice_id: invoice.acumatica_invoice_id,
+      acumatica_reference_nbr: invoice.acumatica_reference_nbr,
+      acumatica_status: invoice.acumatica_status || 'Already Synced',
+      already_synced: true,
+    };
+  }
 
   // Get credentials from vault
   const credentials = await getAcumaticaCredentials(supabase, integration.id);
@@ -345,8 +371,8 @@ async function syncToAcumatica(invoice: any, integration: any) {
     headers: { "Cookie": cookies },
   });
 
-  // Extract ID and ReferenceNbr
-  const acumaticaInvoiceId = createdInvoice.id?.value;
+  // Extract ID and ReferenceNbr - Acumatica returns id directly (not id.value)
+  const acumaticaInvoiceId = createdInvoice.id;
   const referenceNbr = createdInvoice.ReferenceNbr?.value;
 
   console.log("Acumatica invoice created:", { id: acumaticaInvoiceId, referenceNbr });
