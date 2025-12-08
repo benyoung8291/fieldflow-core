@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { AlertCircle, Save } from "lucide-react";
 import { SeasonalAvailabilityList } from "@/components/workers/SeasonalAvailabilityList";
@@ -44,52 +44,50 @@ export default function WorkerCalendar() {
   const [unavailableTo, setUnavailableTo] = useState("");
   const [unavailableReason, setUnavailableReason] = useState("");
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['current-user'],
+  // Single query to fetch user, profile, and availability in parallel
+  const { data: workerData, isLoading } = useQuery({
+    queryKey: ['worker-calendar-data'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      return user;
+      if (!user) throw new Error("Not authenticated");
+
+      // Run profile and availability queries in parallel
+      const [profileResult, availabilityResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('tenant_id, status')
+          .eq('id', user.id)
+          .single(),
+        supabase
+          .from("worker_availability")
+          .select("*")
+          .eq("worker_id", user.id)
+      ]);
+
+      if (profileResult.error) throw profileResult.error;
+      if (availabilityResult.error) throw availabilityResult.error;
+
+      return {
+        user,
+        profile: profileResult.data,
+        availability: availabilityResult.data || []
+      };
     },
+    staleTime: 30000, // Cache for 30 seconds
   });
 
-  const { data: profile } = useQuery({
-    queryKey: ['worker-profile', currentUser?.id],
-    queryFn: async () => {
-      if (!currentUser?.id) return null;
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('tenant_id, status')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (error) throw error;
-      
-      // Set unavailable status based on profile
-      if (data?.status === 'unavailable') {
+  // Initialize state from fetched data
+  useEffect(() => {
+    if (workerData) {
+      // Set unavailable status
+      if (workerData.profile?.status === 'unavailable') {
         setIsUnavailable(true);
       }
-      
-      return data;
-    },
-    enabled: !!currentUser?.id,
-  });
 
-  const { isLoading } = useQuery({
-    queryKey: ["worker-availability", currentUser?.id],
-    queryFn: async () => {
-      if (!currentUser?.id) return [];
-      
-      const { data, error } = await supabase
-        .from("worker_availability")
-        .select("*")
-        .eq("worker_id", currentUser.id);
-
-      if (error) throw error;
-      
+      // Build availability map
       const availabilityMap: AvailabilityData = {};
       daysOfWeek.forEach(day => {
-        const existing = data?.find((d: WorkerAvailability) => d.day_of_week === day.value);
+        const existing = workerData.availability.find((d: WorkerAvailability) => d.day_of_week === day.value);
         availabilityMap[day.value] = existing ? {
           id: existing.id,
           is_available: existing.is_available || false,
@@ -101,21 +99,21 @@ export default function WorkerCalendar() {
           end_time: "17:00",
         };
       });
-      
       setAvailability(availabilityMap);
-      return data || [];
-    },
-    enabled: !!currentUser?.id,
-  });
+    }
+  }, [workerData]);
 
   const saveAvailability = useMutation({
     mutationFn: async () => {
-      if (!currentUser?.id || !profile?.tenant_id) throw new Error("User not found");
+      if (!workerData?.user?.id || !workerData?.profile?.tenant_id) {
+        throw new Error("User data not loaded");
+      }
 
+      // Build updates, excluding undefined ids for new records
       const updates = Object.entries(availability).map(([day, data]) => ({
-        id: data.id,
-        worker_id: currentUser.id,
-        tenant_id: profile.tenant_id,
+        ...(data.id ? { id: data.id } : {}), // Only include id if it exists
+        worker_id: workerData.user.id,
+        tenant_id: workerData.profile.tenant_id,
         day_of_week: day,
         is_available: data.is_available,
         start_time: data.start_time,
@@ -125,7 +123,7 @@ export default function WorkerCalendar() {
       // Upsert all availability records
       const { error: availError } = await supabase
         .from("worker_availability")
-        .upsert(updates, { onConflict: 'worker_id,day_of_week' });
+        .upsert(updates as any, { onConflict: 'worker_id,day_of_week' });
 
       if (availError) throw availError;
 
@@ -137,17 +135,17 @@ export default function WorkerCalendar() {
           status: newStatus,
           status_updated_at: new Date().toISOString()
         })
-        .eq('id', currentUser.id);
+        .eq('id', workerData.user.id);
 
       if (profileError) throw profileError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worker-availability"] });
-      queryClient.invalidateQueries({ queryKey: ["worker-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["worker-calendar-data"] });
       toast.success("Availability updated");
     },
-    onError: () => {
-      toast.error("Failed to update availability");
+    onError: (error: Error) => {
+      console.error("Availability save error:", error);
+      toast.error(error.message || "Failed to update availability");
     },
   });
 
@@ -306,10 +304,10 @@ export default function WorkerCalendar() {
       </Card>
 
       {/* Seasonal Availability */}
-      {profile?.tenant_id && (
+      {workerData?.profile?.tenant_id && (
         <SeasonalAvailabilityList 
-          workerId={currentUser!.id} 
-          tenantId={profile.tenant_id}
+          workerId={workerData.user.id} 
+          tenantId={workerData.profile.tenant_id}
         />
       )}
 
