@@ -128,6 +128,160 @@ export type Database = {
         }
         Relationships: []
       }
+      airtable_location_mapping: {
+        Row: {
+          airtable_auto_id: string | null
+          airtable_location_name: string | null
+          airtable_property: string | null
+          airtable_site_name: string | null
+          airtable_state: string | null
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          is_manually_mapped: boolean | null
+          location_id: string | null
+          match_confidence: number | null
+          match_status: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          airtable_auto_id?: string | null
+          airtable_location_name?: string | null
+          airtable_property?: string | null
+          airtable_site_name?: string | null
+          airtable_state?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          is_manually_mapped?: boolean | null
+          location_id?: string | null
+          match_confidence?: number | null
+          match_status?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          airtable_auto_id?: string | null
+          airtable_location_name?: string | null
+          airtable_property?: string | null
+          airtable_site_name?: string | null
+          airtable_state?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          is_manually_mapped?: boolean | null
+          location_id?: string | null
+          match_confidence?: number | null
+          match_status?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airtable_location_mapping_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "airtable_location_mapping_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "airtable_location_mapping_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      airtable_worker_mapping: {
+        Row: {
+          airtable_technician_name: string
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          is_manually_mapped: boolean | null
+          match_confidence: number | null
+          match_status: string | null
+          profile_id: string | null
+          supplier_id: string | null
+          tenant_id: string
+          updated_at: string | null
+          worker_type: string | null
+        }
+        Insert: {
+          airtable_technician_name: string
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_manually_mapped?: boolean | null
+          match_confidence?: number | null
+          match_status?: string | null
+          profile_id?: string | null
+          supplier_id?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          worker_type?: string | null
+        }
+        Update: {
+          airtable_technician_name?: string
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_manually_mapped?: boolean | null
+          match_confidence?: number | null
+          match_status?: string | null
+          profile_id?: string | null
+          supplier_id?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          worker_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airtable_worker_mapping_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "airtable_worker_mapping_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "airtable_worker_mapping_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "airtable_worker_mapping_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "airtable_worker_mapping_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ap_invoice_line_items: {
         Row: {
           account_code: string | null
@@ -2560,11 +2714,13 @@ export type Database = {
       }
       field_reports: {
         Row: {
+          airtable_record_id: string | null
           appointment_id: string | null
           approved_at: string | null
           approved_by: string | null
           arrival_time: string
           carpet_condition_arrival: number | null
+          carpet_condition_rating: number | null
           created_at: string
           created_by: string
           customer_id: string | null
@@ -2572,15 +2728,21 @@ export type Database = {
           customer_signature_date: string | null
           customer_signature_name: string | null
           equipment_clean_working: boolean
+          equipment_good_order: boolean | null
           equipment_tested_tagged: boolean
+          flooring_sqm: number | null
           flooring_state_description: string | null
+          furniture_quantity: number | null
           had_incident: boolean
           had_problem_areas: boolean
           hard_floor_condition_arrival: number | null
+          hardfloor_condition_rating: number | null
           has_signed_swms: boolean
           id: string
           incident_description: string | null
           internal_notes: string | null
+          is_legacy_import: boolean | null
+          legacy_pdf_url: string | null
           location_id: string | null
           methods_attempted: string | null
           pdf_generated_at: string | null
@@ -2589,20 +2751,26 @@ export type Database = {
           report_number: string
           service_date: string
           service_order_id: string | null
+          service_order_number_reference: string | null
           status: string
+          subcontractor_contact_id: string | null
           submitted_at: string | null
+          swms_completed: boolean | null
           tenant_id: string
+          test_tag_completed: boolean | null
           updated_at: string
           work_description: string
           work_order_number: string | null
           worker_name: string
         }
         Insert: {
+          airtable_record_id?: string | null
           appointment_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           arrival_time: string
           carpet_condition_arrival?: number | null
+          carpet_condition_rating?: number | null
           created_at?: string
           created_by: string
           customer_id?: string | null
@@ -2610,15 +2778,21 @@ export type Database = {
           customer_signature_date?: string | null
           customer_signature_name?: string | null
           equipment_clean_working?: boolean
+          equipment_good_order?: boolean | null
           equipment_tested_tagged?: boolean
+          flooring_sqm?: number | null
           flooring_state_description?: string | null
+          furniture_quantity?: number | null
           had_incident?: boolean
           had_problem_areas?: boolean
           hard_floor_condition_arrival?: number | null
+          hardfloor_condition_rating?: number | null
           has_signed_swms?: boolean
           id?: string
           incident_description?: string | null
           internal_notes?: string | null
+          is_legacy_import?: boolean | null
+          legacy_pdf_url?: string | null
           location_id?: string | null
           methods_attempted?: string | null
           pdf_generated_at?: string | null
@@ -2627,20 +2801,26 @@ export type Database = {
           report_number: string
           service_date: string
           service_order_id?: string | null
+          service_order_number_reference?: string | null
           status?: string
+          subcontractor_contact_id?: string | null
           submitted_at?: string | null
+          swms_completed?: boolean | null
           tenant_id: string
+          test_tag_completed?: boolean | null
           updated_at?: string
           work_description: string
           work_order_number?: string | null
           worker_name: string
         }
         Update: {
+          airtable_record_id?: string | null
           appointment_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           arrival_time?: string
           carpet_condition_arrival?: number | null
+          carpet_condition_rating?: number | null
           created_at?: string
           created_by?: string
           customer_id?: string | null
@@ -2648,15 +2828,21 @@ export type Database = {
           customer_signature_date?: string | null
           customer_signature_name?: string | null
           equipment_clean_working?: boolean
+          equipment_good_order?: boolean | null
           equipment_tested_tagged?: boolean
+          flooring_sqm?: number | null
           flooring_state_description?: string | null
+          furniture_quantity?: number | null
           had_incident?: boolean
           had_problem_areas?: boolean
           hard_floor_condition_arrival?: number | null
+          hardfloor_condition_rating?: number | null
           has_signed_swms?: boolean
           id?: string
           incident_description?: string | null
           internal_notes?: string | null
+          is_legacy_import?: boolean | null
+          legacy_pdf_url?: string | null
           location_id?: string | null
           methods_attempted?: string | null
           pdf_generated_at?: string | null
@@ -2665,9 +2851,13 @@ export type Database = {
           report_number?: string
           service_date?: string
           service_order_id?: string | null
+          service_order_number_reference?: string | null
           status?: string
+          subcontractor_contact_id?: string | null
           submitted_at?: string | null
+          swms_completed?: boolean | null
           tenant_id?: string
+          test_tag_completed?: boolean | null
           updated_at?: string
           work_description?: string
           work_order_number?: string | null
@@ -2700,6 +2890,13 @@ export type Database = {
             columns: ["service_order_id"]
             isOneToOne: false
             referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_subcontractor_contact_id_fkey"
+            columns: ["subcontractor_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {

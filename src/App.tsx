@@ -121,6 +121,10 @@ const Chat = lazy(() => import("./pages/Chat"));
 const WorkerChat = lazy(() => import("./pages/worker/WorkerChat"));
 const TVAvailabilityDashboard = lazy(() => import("./pages/tv/TVAvailabilityDashboard"));
 const TVPinGate = lazy(() => import("./components/tv/TVPinGate").then(m => ({ default: m.TVPinGate })));
+const ImportHub = lazy(() => import("./pages/settings/ImportHub"));
+const ImportLocations = lazy(() => import("./pages/settings/ImportLocations"));
+const ImportWorkers = lazy(() => import("./pages/settings/ImportWorkers"));
+const ImportFieldReports = lazy(() => import("./pages/settings/ImportFieldReports"));
 
 // Loading component for lazy-loaded routes
 const RouteLoader = () => (
