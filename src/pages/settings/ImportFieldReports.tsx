@@ -241,14 +241,14 @@ export default function ImportFieldReports() {
           const { error: insertError } = await supabase
             .from('field_reports')
             .insert({
+              tenant_id: userProfile.tenant_id,
               report_number: reportNumber,
               customer_id: locationMapping.customer_id,
               location_id: locationMapping.location_id,
-              worker_id: workerMapping.profile_id || profile.user?.id,
-              worker_name: row.technician,
+              worker_name: row.technician || 'Unknown',
               service_date: serviceDate || new Date().toISOString().split('T')[0],
               arrival_time: row.time_of_arrival || '08:00',
-              work_description: row.notes || null,
+              work_description: row.notes || 'Legacy import - no description provided',
               internal_notes: row.internal_note || null,
               had_incident: row.incident,
               had_problem_areas: row.problem_areas,
@@ -266,7 +266,7 @@ export default function ImportFieldReports() {
               is_legacy_import: true,
               status: 'approved',
               approved_at: new Date().toISOString(),
-              created_by: profile.user?.id
+              created_by: profile.user?.id || ''
             });
 
           if (insertError) {
