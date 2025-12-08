@@ -113,7 +113,7 @@ export const WorkerMobileBottomNav = () => {
   });
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/98 backdrop-blur-2xl border-t border-border/40 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_16px_rgba(0,0,0,0.3)] pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/40 shadow-lg pb-safe">
       <div className="flex items-center justify-around h-20 px-4">
         {navItemsWithBadge.map((item) => {
           const Icon = item.icon;
@@ -155,7 +155,7 @@ export const WorkerMobileBottomNav = () => {
               <span className="text-[11px] font-medium">More</span>
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[60vh] bg-background backdrop-blur-2xl border-t-2 border-border/40 rounded-t-[32px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)] z-[100]">
+          <SheetContent side="bottom" className="h-[60vh] bg-background border-t-2 border-border/40 rounded-t-[32px] shadow-lg z-[100]">
             <SheetHeader className="mb-6">
               <SheetTitle className="text-2xl font-bold">More Options</SheetTitle>
             </SheetHeader>
