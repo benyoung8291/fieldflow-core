@@ -28,7 +28,8 @@ export type Module =
   | "ap_invoices"
   | "workflows"
   | "knowledge_base"
-  | "reports";
+  | "reports"
+  | "recurring_invoices";
 
 export type Permission = "view" | "create" | "edit" | "delete" | "approve" | "export" | "import";
 

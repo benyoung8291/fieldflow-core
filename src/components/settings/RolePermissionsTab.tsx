@@ -16,6 +16,7 @@ const modules: { key: Module; label: string; description: string; group: string 
   { key: "contacts", label: "Contacts", description: "Contact management and CRM", group: "CRM" },
   { key: "quotes", label: "Quotes", description: "Quote creation and management", group: "Sales" },
   { key: "invoices", label: "Invoices", description: "Invoice creation and management", group: "Financial" },
+  { key: "recurring_invoices", label: "Recurring Invoices", description: "Automated recurring invoice management", group: "Financial" },
   { key: "expenses", label: "Expenses", description: "Expense tracking and approval", group: "Financial" },
   { key: "ap_invoices", label: "AP Invoices", description: "Accounts payable invoice processing", group: "Financial" },
   { key: "projects", label: "Projects", description: "Project planning and execution", group: "Operations" },
