@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PermissionButton, PermissionGate } from "@/components/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -436,9 +437,15 @@ export default function ServiceContractDetails() {
           </div>
           <div className="flex items-center gap-2">
             <CreateTaskButton linkedModule="contract" linkedRecordId={id!} variant="outline" />
-            <Button variant="outline" size="icon" onClick={() => setShowArchiveDialog(true)}>
+            <PermissionButton 
+              module="service_contracts" 
+              permission="edit"
+              variant="outline" 
+              size="icon" 
+              onClick={() => setShowArchiveDialog(true)}
+            >
               <Archive className="h-4 w-4" />
-            </Button>
+            </PermissionButton>
             <Badge variant={contract.status === "active" ? "default" : "secondary"}>{contract.status}</Badge>
           </div>
         </div>

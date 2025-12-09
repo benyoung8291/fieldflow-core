@@ -37,12 +37,14 @@ import ServiceOrderProfitLossCard from "@/components/service-orders/ServiceOrder
 import ProjectPurchaseOrdersTab from "@/components/projects/ProjectPurchaseOrdersTab";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/PurchaseOrderDialog";
 import { usePresenceSystem } from "@/hooks/usePresenceSystem";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [poDialogOpen, setPODialogOpen] = useState(false);
 
@@ -395,38 +397,38 @@ export default function ProjectDetails() {
 
   // Primary action buttons
   const primaryActions: DocumentAction[] = [
-    {
+    ...(hasPermission("invoices", "create") ? [{
       label: "Create Invoice",
       icon: <Receipt className="h-4 w-4" />,
       onClick: () => navigate("/invoices/create", { state: { projectId: id } }),
-      variant: "outline",
-    },
+      variant: "outline" as const,
+    }] : []),
   ];
 
   // File menu actions
   const fileMenuActions: FileMenuAction[] = [
-    {
+    ...(hasPermission("projects", "edit") ? [{
       label: "Edit Project",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => {/* Open edit dialog */},
-    },
-    {
+    }] : []),
+    ...(hasPermission("projects", "create") ? [{
       label: "Duplicate",
       icon: <Copy className="h-4 w-4" />,
       onClick: () => {/* Duplicate project */},
-    },
-    {
+    }] : []),
+    ...(hasPermission("projects", "edit") ? [{
       label: "Change Status",
       onClick: () => {/* Change status dialog */},
       separator: true,
-    },
-    {
+    }] : []),
+    ...(hasPermission("projects", "delete") ? [{
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: () => setDeleteDialogOpen(true),
       destructive: true,
       separator: true,
-    },
+    }] : []),
   ];
 
   // Calculate project profit & loss from service orders

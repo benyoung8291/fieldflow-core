@@ -14,6 +14,7 @@ import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ export default function LeadDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
@@ -288,26 +290,25 @@ export default function LeadDetails() {
   };
 
   const primaryActions = [
-    {
+    ...(hasPermission("leads", "edit") ? [{
       label: "Edit",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
       variant: "outline" as const,
-    },
-    {
+    }] : []),
+    ...(hasPermission("quotes", "create") ? [{
       label: "Create Quote",
       icon: <FileText className="h-4 w-4" />,
       onClick: () => setQuoteDialogOpen(true),
       variant: "outline" as const,
-    },
-    {
+    }] : []),
+    ...(!lead?.converted_to_customer_id && !lead?.is_archived && hasPermission("customers", "create") ? [{
       label: "Convert to Customer",
       icon: <TrendingUp className="h-4 w-4" />,
       onClick: () => setCustomerDialogOpen(true),
       variant: "default" as const,
-      show: !lead?.converted_to_customer_id && !lead?.is_archived,
-    },
-    {
+    }] : []),
+    ...(!lead?.is_archived && hasPermission("leads", "edit") ? [{
       label: "Archive Lead",
       icon: <Archive className="h-4 w-4" />,
       onClick: () => {
@@ -319,9 +320,8 @@ export default function LeadDetails() {
         }
       },
       variant: "outline" as const,
-      show: !lead?.is_archived,
-    },
-    {
+    }] : []),
+    ...(hasPermission("leads", "delete") ? [{
       label: "Delete Lead",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: () => {
@@ -333,7 +333,7 @@ export default function LeadDetails() {
         }
       },
       variant: "destructive" as const,
-    },
+    }] : []),
   ];
 
   const keyInfoSection = (

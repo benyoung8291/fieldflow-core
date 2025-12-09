@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { PermissionButton, PermissionGate } from "@/components/permissions";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -280,10 +281,14 @@ export default function ExpenseDetails() {
           </div>
           <div className="flex gap-2">
             {expense.status === "draft" && (
-              <Button onClick={() => setIsEditDialogOpen(true)}>
+              <PermissionButton 
+                module="expenses"
+                permission="edit"
+                onClick={() => setIsEditDialogOpen(true)}
+              >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
-              </Button>
+              </PermissionButton>
             )}
             {canRetrySync && (
               <Button 
@@ -294,18 +299,20 @@ export default function ExpenseDetails() {
                 {retrySyncMutation.isPending ? "Syncing..." : "Retry Sync"}
               </Button>
             )}
-            {canApprove && (
-              <>
-                <Button variant="outline" onClick={() => setShowRejectionInput(true)}>
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Reject
-                </Button>
-                <Button onClick={() => approveMutation.mutate()}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve
-                </Button>
-              </>
-            )}
+            <PermissionGate module="expenses" permission="approve">
+              {canApprove && (
+                <>
+                  <Button variant="outline" onClick={() => setShowRejectionInput(true)}>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject
+                  </Button>
+                  <Button onClick={() => approveMutation.mutate()}>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Approve
+                  </Button>
+                </>
+              )}
+            </PermissionGate>
           </div>
         </div>
 

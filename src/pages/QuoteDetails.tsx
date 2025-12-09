@@ -66,6 +66,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { usePresence } from "@/hooks/usePresence";
 import { usePresenceSystem } from "@/hooks/usePresenceSystem";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useDocumentRealtime } from "@/hooks/useDocumentRealtime";
 import { useCollaborativeField } from "@/hooks/useCollaborativeField";
 import { useQuoteCollaboration } from "@/hooks/useQuoteCollaboration";
@@ -88,6 +89,7 @@ export default function QuoteDetails() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [emailMode, setEmailMode] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
@@ -1068,7 +1070,7 @@ export default function QuoteDetails() {
   }
 
   // Primary save/approve/convert actions based on status
-  if (canEdit && hasChanges()) {
+  if (canEdit && hasChanges() && hasPermission("quotes", "edit")) {
     actionButtons.push({
       label: isSaving ? "Saving..." : "Save Changes",
       icon: <Save className="h-4 w-4" />,
@@ -1077,7 +1079,7 @@ export default function QuoteDetails() {
     });
   }
   
-  if (isSent && !isConverted) {
+  if (isSent && !isConverted && hasPermission("quotes", "approve")) {
     actionButtons.push({
       label: "Approve Quote",
       icon: <CheckCircle className="h-4 w-4" />,
@@ -1088,35 +1090,41 @@ export default function QuoteDetails() {
   
   // Show conversion buttons when approved
   if (isApproved && !isConverted) {
-    actionButtons.push({
-      label: "Convert to Service Order",
-      icon: <Briefcase className="h-4 w-4" />,
-      onClick: () => {
-        setConversionType('service_order');
-        setConvertDialogOpen(true);
-      },
-      variant: "default",
-    });
+    if (hasPermission("service_orders", "create")) {
+      actionButtons.push({
+        label: "Convert to Service Order",
+        icon: <Briefcase className="h-4 w-4" />,
+        onClick: () => {
+          setConversionType('service_order');
+          setConvertDialogOpen(true);
+        },
+        variant: "default",
+      });
+    }
     
-    actionButtons.push({
-      label: "Convert to Service Contract",
-      icon: <FileText className="h-4 w-4" />,
-      onClick: () => {
-        setConversionType('contract');
-        setConvertDialogOpen(true);
-      },
-      variant: "default",
-    });
+    if (hasPermission("service_contracts", "create")) {
+      actionButtons.push({
+        label: "Convert to Service Contract",
+        icon: <FileText className="h-4 w-4" />,
+        onClick: () => {
+          setConversionType('contract');
+          setConvertDialogOpen(true);
+        },
+        variant: "default",
+      });
+    }
     
-    actionButtons.push({
-      label: "Convert to Project",
-      icon: <FolderKanban className="h-4 w-4" />,
-      onClick: () => {
-        setConversionType('project');
-        setConvertDialogOpen(true);
-      },
-      variant: "default",
-    });
+    if (hasPermission("projects", "create")) {
+      actionButtons.push({
+        label: "Convert to Project",
+        icon: <FolderKanban className="h-4 w-4" />,
+        onClick: () => {
+          setConversionType('project');
+          setConvertDialogOpen(true);
+        },
+        variant: "default",
+      });
+    }
   }
   
   // Show disabled conversion buttons in draft/sent status with explanation
@@ -1161,7 +1169,7 @@ export default function QuoteDetails() {
   }
 
   // Change to Draft (if allowed and not converted)
-  if (!isDraft && !isConverted) {
+  if (!isDraft && !isConverted && hasPermission("quotes", "edit")) {
     actionButtons.push({
       label: "Change to Draft",
       icon: <Edit className="h-4 w-4" />,
@@ -1171,7 +1179,7 @@ export default function QuoteDetails() {
   }
 
   // Move all file menu actions to header buttons
-  if (isDraft && !isConverted) {
+  if (isDraft && !isConverted && hasPermission("quotes", "delete")) {
     actionButtons.push({
       label: "Archive Quote",
       icon: <Trash2 className="h-4 w-4" />,

@@ -43,6 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -75,6 +76,7 @@ export default function ServiceOrderDetails() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createAppointmentDialogOpen, setCreateAppointmentDialogOpen] = useState(false);
   const [appointmentDate, setAppointmentDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
@@ -738,51 +740,53 @@ export default function ServiceOrderDetails() {
   ];
 
   const primaryActions: DocumentAction[] = [
-    {
+    ...(hasPermission("service_orders", "edit") ? [{
       label: "Edit",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setDialogOpen(true),
-      variant: "outline",
-    },
+      variant: "outline" as const,
+    }] : []),
   ];
 
   const secondaryActions: DocumentAction[] = [
-    {
+    ...(hasPermission("invoices", "create") ? [{
       label: "Create Invoice",
       icon: <Receipt className="h-4 w-4" />,
       onClick: handleCreateInvoice,
-    },
-    {
+    }] : []),
+    ...(hasPermission("invoices", "edit") ? [{
       label: "Add to Invoice",
       icon: <Plus className="h-4 w-4" />,
       onClick: () => setAddToInvoiceDialogOpen(true),
-    },
-    {
+    }] : []),
+    ...(hasPermission("purchase_orders", "create") ? [{
       label: "Create PO",
       icon: <ShoppingCart className="h-4 w-4" />,
       onClick: () => setPurchaseOrderDialogOpen(true),
-    },
-    {
+    }] : []),
+    ...(hasPermission("service_orders", "create") ? [{
       label: "Duplicate",
       icon: <Copy className="h-4 w-4" />,
       onClick: () => console.log("duplicate"),
-    },
-    {
-      label: "Complete Order",
-      icon: <CheckCircle className="h-4 w-4" />,
-      onClick: handleCompleteOrder,
-    },
-    {
-      label: "Cancel Order",
-      icon: <XCircle className="h-4 w-4" />,
-      onClick: () => setCancelConfirmOpen(true),
-    },
-    {
+    }] : []),
+    ...(hasPermission("service_orders", "edit") ? [
+      {
+        label: "Complete Order",
+        icon: <CheckCircle className="h-4 w-4" />,
+        onClick: handleCompleteOrder,
+      },
+      {
+        label: "Cancel Order",
+        icon: <XCircle className="h-4 w-4" />,
+        onClick: () => setCancelConfirmOpen(true),
+      },
+    ] : []),
+    ...(hasPermission("service_orders", "delete") ? [{
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: handleDelete,
-      variant: "destructive",
-    },
+      variant: "destructive" as const,
+    }] : []),
   ];
 
   const costBreakdown = {
