@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { APP_VERSION, isNewerVersion, storeVersion } from '@/lib/version';
+import { BUILD_TIMESTAMP, isNewerBuild, storeVersion, formatBuildTimestamp } from '@/lib/version';
 
 export const usePWAUpdate = () => {
   const [needRefresh, setNeedRefresh] = useState(false);
-  const [currentVersion] = useState(APP_VERSION);
-  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+  const [currentBuild] = useState(BUILD_TIMESTAMP);
+  const [latestBuild, setLatestBuild] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const isDev = import.meta.env.DEV;
   const updateSWRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
@@ -26,11 +26,11 @@ export const usePWAUpdate = () => {
         return;
       }
       
-      if (data?.version) {
-        setLatestVersion(data.version);
+      if (data?.buildTimestamp) {
+        setLatestBuild(data.buildTimestamp);
         
-        if (isNewerVersion(currentVersion, data.version)) {
-          console.log(`New version available: ${data.version} (current: ${currentVersion})`);
+        if (isNewerBuild(currentBuild, data.buildTimestamp)) {
+          console.log(`New build available: ${data.buildTimestamp} (current: ${currentBuild})`);
           setNeedRefresh(true);
         }
       }
@@ -39,7 +39,7 @@ export const usePWAUpdate = () => {
     } finally {
       setIsChecking(false);
     }
-  }, [currentVersion, isDev]);
+  }, [currentBuild, isDev]);
 
   // Register service worker with proper callbacks
   useEffect(() => {
@@ -154,8 +154,8 @@ export const usePWAUpdate = () => {
       }
       
       // 3. Clear version from localStorage and update to latest
-      if (latestVersion) {
-        storeVersion(latestVersion);
+      if (latestBuild) {
+        storeVersion(latestBuild);
       }
       
       // 4. Clear any app-specific cached data
@@ -184,8 +184,10 @@ export const usePWAUpdate = () => {
 
   return {
     needRefresh,
-    currentVersion,
-    latestVersion,
+    currentBuild,
+    latestBuild,
+    currentBuildFormatted: formatBuildTimestamp(currentBuild),
+    latestBuildFormatted: latestBuild ? formatBuildTimestamp(latestBuild) : null,
     isChecking,
     checkForUpdates: checkServerVersion,
     temporaryDismiss,

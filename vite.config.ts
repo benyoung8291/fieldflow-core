@@ -5,7 +5,14 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  // Generate build timestamp - unique per build (format: YYYYMMDDHHMMSS)
+  const buildTimestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+  
+  return {
+  define: {
+    '__BUILD_TIMESTAMP__': JSON.stringify(buildTimestamp),
+  },
   server: {
     host: "::",
     port: 8080,
@@ -99,4 +106,5 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ['react', 'react-dom'],
   },
-}));
+};
+});

@@ -4,7 +4,13 @@ import { Button } from '@/components/ui/button';
 import { usePWAUpdate } from '@/hooks/usePWAUpdate';
 
 export function UpdateNotificationBar() {
-  const { needRefresh, currentVersion, latestVersion, clearCacheAndReload, temporaryDismiss } = usePWAUpdate();
+  const { 
+    needRefresh, 
+    currentBuildFormatted, 
+    latestBuildFormatted, 
+    clearCacheAndReload, 
+    temporaryDismiss 
+  } = usePWAUpdate();
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Don't show if no update available
@@ -26,9 +32,9 @@ export function UpdateNotificationBar() {
             <span className="text-sm font-semibold">
               New version available
             </span>
-            {latestVersion && (
+            {latestBuildFormatted && (
               <span className="text-xs opacity-90">
-                v{currentVersion} → v{latestVersion}
+                {currentBuildFormatted} → {latestBuildFormatted}
               </span>
             )}
           </div>
