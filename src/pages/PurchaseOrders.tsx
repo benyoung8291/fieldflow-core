@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -14,6 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 import { PermissionButton } from "@/components/permissions";
 
 export default function PurchaseOrders() {
+  useLogListPageAccess('purchase_orders');
+  
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
