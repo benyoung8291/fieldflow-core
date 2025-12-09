@@ -112,16 +112,40 @@ export default function Auth() {
       // RPC functions return arrays, get first result
       const access = Array.isArray(accessData) && accessData.length > 0 ? accessData[0] : null;
 
+      // SECURITY: Log access decision for debugging
+      console.log("🔐 Access check result:", {
+        hasAccess: !!access,
+        canAccessOffice: access?.can_access_office,
+        canAccessWorker: access?.can_access_worker,
+        canAccessCustomerPortal: access?.can_access_customer_portal,
+        defaultRoute: access?.default_route,
+        hasRole: access?.has_role,
+      });
+
       if (!access) {
-        toast.error("Access denied. Please contact your administrator.");
+        console.error("🚫 SECURITY: No access data returned for user");
+        toast.error("Your account setup is incomplete. Please contact your administrator.");
         await supabase.auth.signOut();
         setIsLoading(false);
         return;
       }
 
-      // Check if user has any access
+      // SECURITY: Verify user has at least one access flag
       if (!access.can_access_office && !access.can_access_worker && !access.can_access_customer_portal) {
-        toast.error("Access denied. Please contact your administrator.");
+        console.error("🚫 SECURITY: User has no access flags set:", {
+          userId: access.user_id,
+          hasRole: access.has_role,
+        });
+        toast.error("Your account setup is incomplete. Please contact your administrator.");
+        await supabase.auth.signOut();
+        setIsLoading(false);
+        return;
+      }
+
+      // SECURITY: Verify default route is valid for the user's access level
+      if (access.default_route === '/dashboard' && !access.can_access_office) {
+        console.error("🚫 SECURITY: Invalid route assignment - worker directed to office");
+        toast.error("Access configuration error. Please contact your administrator.");
         await supabase.auth.signOut();
         setIsLoading(false);
         return;
