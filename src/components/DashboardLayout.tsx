@@ -94,9 +94,9 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
 
   // Filter menu items based on permissions
   const filteredMenuItems = useMemo(() => {
-    // Don't filter until permissions are definitely loaded
+    // Don't filter until permissions are definitely loaded - return empty to show skeleton
     if (permissionsLoading || !hasLoadedPermissions) {
-      return menuItems;
+      return [];
     }
     
     return menuItems.filter(item => {
@@ -340,7 +340,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
           </div>
           
           <nav className="flex-1 flex flex-col gap-2 px-6 overflow-y-auto">
-            {menuLoading ? (
+            {(menuLoading || permissionsLoading || !hasLoadedPermissions) ? (
               <div className="space-y-2">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="h-10 bg-muted/50 animate-pulse rounded-lg" />

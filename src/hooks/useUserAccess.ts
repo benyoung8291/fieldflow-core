@@ -38,7 +38,8 @@ export function useUserAccess() {
         defaultRoute: accessData.default_route
       };
     },
-    retry: false,
+    retry: 2, // Retry twice on transient failures
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
     staleTime: 0, // Always fetch fresh for security-critical access checks
     gcTime: 60 * 1000, // 1 minute - reduced for security-critical data
   });
