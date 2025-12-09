@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -26,6 +27,9 @@ export default function SupplierDetails() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<any>(null);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('suppliers', id);
 
   const { data: supplier, isLoading: supplierLoading } = useQuery({
     queryKey: ["supplier", id],

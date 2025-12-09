@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -49,6 +50,9 @@ export default function CustomerDetails() {
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [isSubAccountDialogOpen, setIsSubAccountDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('customers', id);
 
   const { data: session } = useQuery({
     queryKey: ["session"],

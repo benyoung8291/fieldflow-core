@@ -2296,6 +2296,56 @@ export type Database = {
           },
         ]
       }
+      data_access_logs: {
+        Row: {
+          accessed_at: string
+          action: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          record_id: string | null
+          table_name: string
+          tenant_id: string
+          user_agent: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          accessed_at?: string
+          action: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          record_id?: string | null
+          table_name: string
+          tenant_id: string
+          user_agent?: string | null
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          accessed_at?: string
+          action?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          record_id?: string | null
+          table_name?: string
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_access_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_notes: {
         Row: {
           content: string
@@ -9671,6 +9721,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      batch_insert_access_logs: { Args: { logs: Json }; Returns: number }
       calculate_next_generation_date:
         | {
             Args: {
