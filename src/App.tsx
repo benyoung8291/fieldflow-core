@@ -220,13 +220,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Component to redirect authenticated users to their default route
 const RedirectToDefaultRoute = () => {
-  const { data: access, isLoading } = useUserAccess();
+  const { data: access, isLoading, error } = useUserAccess();
   
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
   
-  return <Navigate to={access?.defaultRoute || "/dashboard"} replace />;
+  // SECURITY: If no access data or error, redirect to auth - never default to office
+  if (error || !access || !access.defaultRoute) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  return <Navigate to={access.defaultRoute} replace />;
 };
 
 const App = () => {
@@ -292,6 +297,11 @@ const App = () => {
       if (oauthInProgress === 'true') {
         console.log(`⏭️ [${timestamp}] BLOCKED - OAuth in progress`);
         return;
+      }
+      
+      // SECURITY: Clear user access cache on any auth change to prevent stale permissions
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        queryClient.removeQueries({ queryKey: ["user-access"] });
       }
       
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
