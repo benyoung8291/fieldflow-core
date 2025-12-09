@@ -1,11 +1,45 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { APP_VERSION, isNewerVersion, storeVersion } from '@/lib/version';
 
 export const usePWAUpdate = () => {
   const [needRefresh, setNeedRefresh] = useState(false);
+  const [currentVersion] = useState(APP_VERSION);
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
   const isDev = import.meta.env.DEV;
   const updateSWRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const dismissedAtRef = useRef<number | null>(null);
+
+  // Check version from edge function
+  const checkServerVersion = useCallback(async () => {
+    if (isDev) return;
+    
+    setIsChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-app-version');
+      
+      if (error) {
+        console.warn('Failed to check server version:', error);
+        return;
+      }
+      
+      if (data?.version) {
+        setLatestVersion(data.version);
+        
+        if (isNewerVersion(currentVersion, data.version)) {
+          console.log(`New version available: ${data.version} (current: ${currentVersion})`);
+          setNeedRefresh(true);
+        }
+      }
+    } catch (error) {
+      console.warn('Version check failed:', error);
+    } finally {
+      setIsChecking(false);
+    }
+  }, [currentVersion, isDev]);
 
   // Register service worker with proper callbacks
   useEffect(() => {
@@ -17,32 +51,6 @@ export const usePWAUpdate = () => {
         onNeedRefresh() {
           console.log('New content available, please refresh');
           setNeedRefresh(true);
-          
-          // Show user-friendly update notification
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-          const isChrome = /Chrome/.test(navigator.userAgent);
-          const isFirefox = /Firefox/.test(navigator.userAgent);
-          const isEdge = /Edg/.test(navigator.userAgent);
-          
-          let instructions = "Refresh your browser to load the latest version.";
-          
-          if (isIOS && isSafari) {
-            instructions = "Tap and hold the refresh button, then select 'Reload Without Content Blockers' or press Cmd+R on keyboard.";
-          } else if (isChrome || isEdge) {
-            instructions = "Press Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to hard refresh.";
-          } else if (isFirefox) {
-            instructions = "Press Ctrl+F5 (Windows/Linux) or Cmd+Shift+R (Mac) to hard refresh.";
-          }
-          
-          toast("Update Available", {
-            description: instructions,
-            duration: 10000,
-            action: {
-              label: "Update Now",
-              onClick: () => clearCacheAndReload()
-            }
-          });
         },
         onOfflineReady() {
           console.log('App ready for offline use');
@@ -51,7 +59,6 @@ export const usePWAUpdate = () => {
           console.log('SW registered:', swUrl);
           if (registration) {
             registrationRef.current = registration;
-            // Check for updates on initial registration
             registration.update();
           }
         },
@@ -62,16 +69,18 @@ export const usePWAUpdate = () => {
     });
   }, [isDev]);
 
-  // Periodic update checks (every 5 minutes)
+  // Check server version on mount and periodically
   useEffect(() => {
     if (isDev) return;
     
-    const interval = setInterval(() => {
-      checkForUpdates();
-    }, 5 * 60 * 1000); // 5 minutes
+    // Check immediately on mount
+    checkServerVersion();
+    
+    // Check every 5 minutes
+    const interval = setInterval(checkServerVersion, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, [isDev]);
+  }, [checkServerVersion, isDev]);
 
   // Check for updates on visibility change
   useEffect(() => {
@@ -79,74 +88,107 @@ export const usePWAUpdate = () => {
     
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        checkForUpdates();
+        checkServerVersion();
+        
+        // Re-check SW updates
+        if (registrationRef.current) {
+          registrationRef.current.update();
+        }
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isDev]);
+  }, [checkServerVersion, isDev]);
 
-  const checkForUpdates = async () => {
-    if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (registration) {
-        await registration.update();
+  // Re-show banner after 30 minutes if dismissed
+  useEffect(() => {
+    if (!dismissedAtRef.current || !needRefresh) return;
+    
+    const checkDismissTimeout = setInterval(() => {
+      if (dismissedAtRef.current && Date.now() - dismissedAtRef.current > 30 * 60 * 1000) {
+        dismissedAtRef.current = null;
+        setNeedRefresh(true);
       }
-    }
-  };
+    }, 60 * 1000); // Check every minute
+    
+    return () => clearInterval(checkDismissTimeout);
+  }, [needRefresh]);
 
-  const applyUpdate = () => {
-    if (updateSWRef.current) {
-      updateSWRef.current(true);
-    }
+  const temporaryDismiss = useCallback(() => {
+    dismissedAtRef.current = Date.now();
     setNeedRefresh(false);
-  };
+  }, []);
 
   const clearCacheAndReload = async () => {
     try {
-      console.log('Starting app update process...');
+      console.log('Starting comprehensive app update...');
       toast.info('Updating app...', { duration: 2000 });
       
-      // Signal the waiting service worker to skip waiting
+      // 1. Signal waiting service worker to skip waiting
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.getRegistration();
         if (registration?.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-          // Wait for the new service worker to take control
           await new Promise<void>((resolve) => {
             const onControllerChange = () => {
               navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
               resolve();
             };
             navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
-            // Timeout after 3 seconds if controller doesn't change
             setTimeout(resolve, 3000);
           });
         }
+        
+        // Unregister all service workers
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+        console.log(`Unregistered ${registrations.length} service workers`);
       }
       
-      // Clear all caches
+      // 2. Clear all caches
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         console.log(`Clearing ${cacheNames.length} caches`);
         await Promise.all(cacheNames.map(name => caches.delete(name)));
       }
       
-      // Force reload bypassing cache
+      // 3. Clear version from localStorage and update to latest
+      if (latestVersion) {
+        storeVersion(latestVersion);
+      }
+      
+      // 4. Clear any app-specific cached data
+      try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith('query-') || key?.startsWith('cache-')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+      } catch (e) {
+        console.warn('Failed to clear some localStorage items:', e);
+      }
+      
+      // 5. Force hard reload
       console.log('Reloading app...');
       window.location.reload();
     } catch (error) {
       console.error('Update failed:', error);
-      // Fallback: hard reload
-      window.location.href = window.location.href;
+      // Fallback: force navigation
+      window.location.href = window.location.origin + window.location.pathname + '?_=' + Date.now();
     }
   };
 
   return {
     needRefresh,
-    checkForUpdates,
-    applyUpdate,
+    currentVersion,
+    latestVersion,
+    isChecking,
+    checkForUpdates: checkServerVersion,
+    temporaryDismiss,
     clearCacheAndReload,
   };
 };
