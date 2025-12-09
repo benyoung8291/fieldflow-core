@@ -730,6 +730,117 @@ export default function ServiceOrderDetails() {
     });
   };
 
+  const handleDuplicate = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile) throw new Error("Profile not found");
+
+      // Get existing line items
+      const { data: existingLineItems } = await supabase
+        .from("service_order_line_items")
+        .select("*")
+        .eq("service_order_id", id)
+        .order("item_order");
+
+      // Get sequential number from settings
+      const { data: sequentialSetting } = await supabase
+        .from("sequential_number_settings")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("entity_type", "service_order")
+        .maybeSingle();
+
+      let nextNumber = sequentialSetting?.next_number || 1;
+      const prefix = sequentialSetting?.prefix || "SO";
+      const numberLength = sequentialSetting?.number_length || 6;
+
+      // Create duplicated service order
+      const newOrderData = {
+        tenant_id: profile.tenant_id,
+        customer_id: order?.customer_id,
+        customer_location_id: order?.customer_location_id,
+        customer_contact_id: order?.customer_contact_id,
+        facility_manager_contact_id: order?.facility_manager_contact_id,
+        title: `${order?.title || ""} (Copy)`,
+        description: order?.description,
+        order_number: `${prefix}-${String(nextNumber).padStart(numberLength, "0")}`,
+        status: "draft" as const,
+        priority: order?.priority || "normal",
+        billing_type: order?.billing_type,
+        fixed_amount: order?.fixed_amount,
+        estimated_hours: order?.estimated_hours,
+        subtotal: order?.subtotal,
+        tax_rate: order?.tax_rate,
+        tax_amount: order?.tax_amount,
+        total_amount: order?.total_amount,
+        work_order_number: order?.work_order_number,
+        purchase_order_number: order?.purchase_order_number,
+        key_number: order?.key_number,
+        skill_required: order?.skill_required,
+        worker_can_contact_customer: order?.worker_can_contact_customer,
+        created_by: user.id,
+        // Do NOT copy: contract_id, generated_from_date, completed_date, project_id
+      };
+
+      const { data: newOrder, error } = await supabase
+        .from("service_orders")
+        .insert([newOrderData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update sequential number
+      if (sequentialSetting) {
+        await supabase
+          .from("sequential_number_settings")
+          .update({ next_number: nextNumber + 1 })
+          .eq("id", sequentialSetting.id);
+      }
+
+      // Copy line items
+      if (existingLineItems && existingLineItems.length > 0) {
+        const newLineItems = existingLineItems.map((item) => ({
+          service_order_id: newOrder.id,
+          tenant_id: profile.tenant_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          cost_price: item.cost_price,
+          line_total: item.line_total,
+          estimated_hours: item.estimated_hours,
+          item_order: item.item_order,
+          is_gst_free: item.is_gst_free,
+          notes: item.notes,
+          price_book_item_id: item.price_book_item_id,
+          is_from_price_book: item.is_from_price_book,
+          parent_line_item_id: item.parent_line_item_id,
+          // Do NOT copy: contract_line_item_id, generation_date
+        }));
+
+        await supabase.from("service_order_line_items").insert(newLineItems);
+      }
+
+      toast({ title: "Service order duplicated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["service-orders"] });
+      navigate(`/service-orders/${newOrder.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Error duplicating service order",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading || !order) {
     return <div>Loading...</div>;
   }
@@ -767,7 +878,7 @@ export default function ServiceOrderDetails() {
     ...(hasPermission("service_orders", "create") ? [{
       label: "Duplicate",
       icon: <Copy className="h-4 w-4" />,
-      onClick: () => console.log("duplicate"),
+      onClick: handleDuplicate,
     }] : []),
     ...(hasPermission("service_orders", "edit") ? [
       {
