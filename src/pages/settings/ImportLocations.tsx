@@ -157,17 +157,18 @@ export default function ImportLocations() {
             return;
           }
 
-          // Extract unique locations
+          // Extract unique locations - support multiple CSV formats
           const uniqueLocations = new Map<string, any>();
           results.data.forEach((row: any) => {
-            const autoId = row['autonumber (from Locations)'] || row['Auto ID'];
+            // Support multiple column name variations
+            const autoId = row['AutoID'] || row['Auto ID'] || row['autonumber (from Locations)'];
             if (autoId && !uniqueLocations.has(autoId)) {
               uniqueLocations.set(autoId, {
                 airtable_auto_id: autoId,
-                airtable_location_name: row['Location'] || '',
-                airtable_property: row['Property (from Locations)'] || '',
-                airtable_site_name: row['Site Name (from Locations)'] || '',
-                airtable_state: row['State (from Locations)'] || '',
+                airtable_location_name: row['Name'] || row['Location'] || '',
+                airtable_property: row['Property'] || row['Property (from Locations)'] || '',
+                airtable_site_name: row['Location Name'] || row['Site Name (from Locations)'] || '',
+                airtable_state: row['State'] || row['State (from Locations)'] || '',
                 tenant_id: userProfile.tenant_id,
                 match_status: 'pending'
               });
