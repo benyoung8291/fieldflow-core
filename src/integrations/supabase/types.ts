@@ -10131,18 +10131,6 @@ export type Database = {
         | "user_management"
         | "integrations"
         | "recurring_invoices"
-      app_role:
-        | "tenant_admin"
-        | "supervisor"
-        | "manager"
-        | "user"
-        | "management"
-        | "worker"
-        | "accountant"
-        | "warehouse_manager"
-        | "subcontractor"
-        | "super_admin"
-        | "customer"
       appointment_status:
         | "draft"
         | "published"
@@ -10344,19 +10332,6 @@ export const Constants = {
         "user_management",
         "integrations",
         "recurring_invoices",
-      ],
-      app_role: [
-        "tenant_admin",
-        "supervisor",
-        "manager",
-        "user",
-        "management",
-        "worker",
-        "accountant",
-        "warehouse_manager",
-        "subcontractor",
-        "super_admin",
-        "customer",
       ],
       appointment_status: [
         "draft",
