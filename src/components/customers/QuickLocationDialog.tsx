@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -130,31 +131,19 @@ export default function QuickLocationDialog({
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[500px] bg-background border-l border-border shadow-lg z-50 overflow-y-auto">
-      <div className="sticky top-0 bg-background border-b border-border p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Create New Location</h2>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            className="h-8 w-8 p-0"
-          >
-            ✕
-          </Button>
-        </div>
-        {customerName && (
-          <p className="text-sm text-muted-foreground">
-            Adding location for: <span className="font-medium text-foreground">{customerName}</span>
-          </p>
-        )}
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create New Location</DialogTitle>
+          {customerName && (
+            <p className="text-sm text-muted-foreground">
+              Adding location for: <span className="font-medium text-foreground">{customerName}</span>
+            </p>
+          )}
+        </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4 p-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Location Name *</Label>
             <Input
@@ -282,6 +271,7 @@ export default function QuickLocationDialog({
             </Button>
           </div>
         </form>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
