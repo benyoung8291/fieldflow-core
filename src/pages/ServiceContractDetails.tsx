@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +46,9 @@ export default function ServiceContractDetails() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showCreateLocationDialog, setShowCreateLocationDialog] = useState(false);
   const [editingLocationForItem, setEditingLocationForItem] = useState<string | null>(null);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('service_contracts', id);
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["service-contract", id],

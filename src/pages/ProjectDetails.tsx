@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,9 @@ export default function ProjectDetails() {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [poDialogOpen, setPODialogOpen] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('projects', id);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],

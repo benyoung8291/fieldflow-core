@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -26,6 +27,9 @@ export default function Contacts() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const isMobile = useIsMobile();
   const pagination = usePagination({ initialPageSize: 50 });
+
+  // Log list page access for audit trail
+  useLogListPageAccess('contacts');
 
   const { data: contactsResponse, isLoading } = useQuery({
     queryKey: ["contacts", activeTab, showArchived, searchQuery, pagination.currentPage, pagination.pageSize, sortColumn, sortDirection],

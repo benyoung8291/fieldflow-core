@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +36,9 @@ export default function ServiceContracts() {
   const [genSortBy, setGenSortBy] = useState<string>("date");
   const [genSortOrder, setGenSortOrder] = useState<"asc" | "desc">("asc");
   const [genFilterText, setGenFilterText] = useState("");
+
+  // Log list page access for audit trail
+  useLogListPageAccess('service_contracts');
   
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["service-contracts-dashboard"],

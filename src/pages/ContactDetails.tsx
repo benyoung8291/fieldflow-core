@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
@@ -27,6 +28,9 @@ export default function ContactDetails() {
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('contacts', id);
 
   const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", id],

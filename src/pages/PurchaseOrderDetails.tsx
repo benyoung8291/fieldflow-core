@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -48,6 +49,9 @@ export default function PurchaseOrderDetails() {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('purchase_orders', id);
   const [apInvoiceDialogOpen, setApInvoiceDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceOrders, setServiceOrders] = useState<any[]>([]);

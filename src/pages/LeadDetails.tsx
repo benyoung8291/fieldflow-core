@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DocumentDetailLayout from "@/components/layout/DocumentDetailLayout";
@@ -34,6 +35,9 @@ export default function LeadDetails() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [archiveContacts, setArchiveContacts] = useState(false);
   const [inactivateContacts, setInactivateContacts] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('leads', id);
 
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", id],

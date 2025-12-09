@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -37,6 +38,9 @@ export default function Workers() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const queryClient = useQueryClient();
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "workers-page" });
+
+  // Log list page access for audit trail
+  useLogListPageAccess('workers');
 
   const updateCursor = (e: React.MouseEvent) => {
     updateCursorPosition(e.clientX, e.clientY);

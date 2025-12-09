@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,6 +76,9 @@ export default function AppointmentDetails() {
   const { isMobile } = useViewMode();
   const isSupervisorOrAdmin = isAdmin || userRoles?.some((r) => r.role === "supervisor");
   const [editMode, setEditMode] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('appointments', id);
   const [formData, setFormData] = useState({
     location_address: "",
   });
