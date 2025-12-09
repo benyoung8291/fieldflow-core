@@ -123,11 +123,20 @@ export const usePermissions = () => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
-  const hasLoadedPermissions = useMemo(() => 
-    !rolesLoading && 
-    (userRoles?.length === 0 || (permissions !== undefined)),
-    [rolesLoading, userRoles, permissions]
-  );
+  const hasLoadedPermissions = useMemo(() => {
+    // Still loading roles
+    if (rolesLoading) return false;
+    // Roles failed to load - consider done to prevent infinite loading
+    if (rolesError) return true;
+    // No roles means no permissions to load - done
+    if (!userRoles || userRoles.length === 0) return true;
+    // Still loading permissions for existing roles
+    if (permissionsLoading) return false;
+    // Permissions failed to load - consider done
+    if (permissionsError) return true;
+    // Permissions loaded successfully
+    return permissions !== undefined;
+  }, [rolesLoading, rolesError, userRoles, permissionsLoading, permissionsError, permissions]);
 
   const isAdmin = useMemo(() => 
     userRoles?.some((r) => r.role === "tenant_admin" || r.role === "super_admin") || false,
