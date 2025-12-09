@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PermissionButton } from "@/components/permissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -158,10 +159,15 @@ export default function SupplierDetails() {
                 linkedRecordId={id!}
                 variant="outline"
               />
-              <Button onClick={() => setIsEditDialogOpen(true)} className="gap-2">
+              <PermissionButton 
+                module="suppliers"
+                permission="edit"
+                onClick={() => setIsEditDialogOpen(true)} 
+                className="gap-2"
+              >
                 <Edit className="h-4 w-4" />
                 Edit Supplier
-              </Button>
+              </PermissionButton>
             </div>
           </div>
         </div>

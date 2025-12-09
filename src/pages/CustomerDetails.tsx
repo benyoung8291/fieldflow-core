@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PermissionButton } from "@/components/permissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
@@ -197,18 +198,25 @@ export default function CustomerDetails() {
                 linkedRecordId={id!}
                 variant="outline"
               />
-              <Button 
+              <PermissionButton 
+                module="customers"
+                permission="delete"
                 variant="outline" 
                 onClick={() => setIsDeleteDialogOpen(true)} 
                 className="gap-2 text-destructive hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
-              </Button>
-              <Button onClick={() => setIsEditDialogOpen(true)} className="gap-2">
+              </PermissionButton>
+              <PermissionButton 
+                module="customers"
+                permission="edit"
+                onClick={() => setIsEditDialogOpen(true)} 
+                className="gap-2"
+              >
                 <Edit className="h-4 w-4" />
                 Edit Customer
-              </Button>
+              </PermissionButton>
             </div>
           </div>
         </div>

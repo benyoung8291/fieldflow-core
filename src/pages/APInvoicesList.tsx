@@ -3,6 +3,7 @@ import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { PermissionButton } from "@/components/permissions";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -73,10 +74,14 @@ export default function APInvoicesList() {
               <h1 className="text-3xl font-bold text-foreground mb-2">AP Invoices</h1>
               <p className="text-muted-foreground">Manage and track supplier bills (accounts payable)</p>
             </div>
-            <Button onClick={() => setDialogOpen(true)}>
+            <PermissionButton 
+              module="ap_invoices" 
+              permission="create"
+              onClick={() => setDialogOpen(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create AP Invoice
-            </Button>
+            </PermissionButton>
           </div>
 
           <div className="flex items-center gap-4 mb-6">

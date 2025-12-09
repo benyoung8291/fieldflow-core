@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { PermissionButton } from "@/components/permissions";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Calendar, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -59,10 +60,14 @@ export default function RecurringInvoices() {
               Manage automated invoice generation schedules
             </p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
+          <PermissionButton 
+            module="invoices" 
+            permission="create"
+            onClick={() => setIsDialogOpen(true)}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Create Recurring Invoice
-          </Button>
+          </PermissionButton>
         </div>
 
         <div className="flex items-center gap-4">

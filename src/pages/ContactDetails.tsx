@@ -10,6 +10,7 @@ import ContactManagementDialog from "@/components/contacts/ContactManagementDial
 import { QuickActionsMenu } from "@/components/quick-actions/QuickActionsMenu";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +21,7 @@ export default function ContactDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [leadFormData, setLeadFormData] = useState({
@@ -228,19 +230,19 @@ export default function ContactDetails() {
   const isArchived = contact.status === "inactive";
 
   const primaryActions = [
-    {
+    ...(hasPermission("contacts", "edit") ? [{
       label: "Edit",
       icon: <Edit className="h-4 w-4" />,
       onClick: () => setEditDialogOpen(true),
       variant: "outline" as const,
-    },
-    ...(showConvertToLead ? [{
+    }] : []),
+    ...(showConvertToLead && hasPermission("leads", "create") ? [{
       label: "Convert to Lead",
       icon: <ArrowRight className="h-4 w-4" />,
       onClick: () => setConvertDialogOpen(true),
       variant: "default" as const,
     }] : []),
-    ...(isArchived ? [{
+    ...(hasPermission("contacts", "edit") ? (isArchived ? [{
       label: "Unarchive",
       icon: <Archive className="h-4 w-4" />,
       onClick: () => unarchiveMutation.mutate(),
@@ -250,13 +252,13 @@ export default function ContactDetails() {
       icon: <Archive className="h-4 w-4" />,
       onClick: () => archiveMutation.mutate(),
       variant: "outline" as const,
-    }]),
-    {
+    }]) : []),
+    ...(hasPermission("contacts", "delete") ? [{
       label: "Delete",
       icon: <Trash2 className="h-4 w-4" />,
       onClick: handleDeleteClick,
       variant: "destructive" as const,
-    },
+    }] : []),
   ];
 
   const keyInfoItems = [

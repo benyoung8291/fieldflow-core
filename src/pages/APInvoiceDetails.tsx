@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -34,6 +35,7 @@ export default function APInvoiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fetchingPdf, setFetchingPdf] = useState(false);
 
@@ -152,12 +154,12 @@ export default function APInvoiceDetails() {
   ];
 
   const primaryActions: Array<{ label: string; icon?: any; onClick: () => void; variant?: "default" | "outline" | "destructive" | "ghost" }> = [
-    ...(canApprove ? [{
+    ...(canApprove && hasPermission("ap_invoices", "approve") ? [{
       label: syncMutation.isPending ? "Approving & Syncing..." : "Approve & Sync",
       onClick: handleApprove,
       variant: "default" as const
     }] : []),
-    ...(canEdit ? [{
+    ...(canEdit && hasPermission("ap_invoices", "delete") ? [{
       label: "Delete",
       onClick: () => setDeleteDialogOpen(true),
       variant: "destructive" as const
