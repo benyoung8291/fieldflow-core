@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
@@ -91,6 +92,9 @@ export default function ServiceOrderDetails() {
   const [preferredDate, setPreferredDate] = useState<Date | undefined>();
   const [dateRangeStart, setDateRangeStart] = useState<Date | undefined>();
   const [dateRangeEnd, setDateRangeEnd] = useState<Date | undefined>();
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('service_orders', id);
 
   // Fetch project integration setting
   const { data: integrationSettings } = useQuery({

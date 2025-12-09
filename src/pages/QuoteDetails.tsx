@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import DocumentDetailLayout, {
@@ -94,6 +95,9 @@ export default function QuoteDetails() {
   const [conversionType, setConversionType] = useState<'project' | 'service_order' | 'contract' | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('quotes', id);
   
   // Legacy field-level presence (keep for existing FieldPresenceWrapper usage)
   const { 

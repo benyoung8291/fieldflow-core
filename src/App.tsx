@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ViewModeProvider } from "@/contexts/ViewModeContext";
 import { BrandColorsProvider } from "@/components/BrandColorsProvider";
+import { DataAccessLoggerProvider } from "@/contexts/DataAccessLoggerContext";
 import Auth from "./pages/Auth";
 import FirstPasswordReset from "./pages/FirstPasswordReset";
 import { useUserAccess } from "./hooks/useUserAccess";
@@ -338,8 +339,9 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrandColorsProvider>
-        <ViewModeProvider>
-          <ThemeProvider>
+        <DataAccessLoggerProvider>
+          <ViewModeProvider>
+            <ThemeProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -467,8 +469,9 @@ const App = () => {
           </Suspense>
           </BrowserRouter>
         </TooltipProvider>
-      </ThemeProvider>
-      </ViewModeProvider>
+          </ThemeProvider>
+        </ViewModeProvider>
+        </DataAccessLoggerProvider>
       </BrandColorsProvider>
     </QueryClientProvider>
   );

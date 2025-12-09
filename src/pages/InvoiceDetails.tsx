@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { supabase } from "@/integrations/supabase/client";
 import DocumentDetailLayout, { StatusBadge, DocumentAction, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import KeyInfoCard from "@/components/layout/KeyInfoCard";
@@ -43,6 +44,9 @@ export default function InvoiceDetails() {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [deleteInvoiceDialogOpen, setDeleteInvoiceDialogOpen] = useState(false);
   const [fetchingPdf, setFetchingPdf] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('invoices', id);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", id],
