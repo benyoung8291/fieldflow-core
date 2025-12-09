@@ -29,33 +29,64 @@ export default function Auth() {
     let mounted = true;
     
     const checkAuth = async () => {
+      const timestamp = new Date().toISOString();
+      console.log(`🔐 [${timestamp}] AUTH_CHECK: Starting session check on mount`);
+      
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (mounted && session) {
+          console.log(`🔐 [${timestamp}] AUTH_CHECK: Active session found`, {
+            userId: session.user.id,
+            email: session.user.email,
+            sessionExpiry: session.expires_at,
+          });
+          
           // Get user's actual access info to determine correct route
           const { data: accessData, error: accessError } = await supabase.rpc('get_user_access_info');
           
           if (accessError) {
-            console.error("Access check error:", accessError);
+            console.error(`🚫 [${timestamp}] AUTH_CHECK: Access RPC failed`, {
+              error: accessError.message,
+              code: accessError.code,
+              userId: session.user.id,
+            });
             setIsCheckingAuth(false);
             return;
           }
           
           const access = Array.isArray(accessData) && accessData.length > 0 ? accessData[0] : null;
           
+          console.log(`🔐 [${timestamp}] AUTH_CHECK: Access data retrieved`, {
+            hasAccessData: !!access,
+            hasRole: access?.has_role,
+            isWorker: access?.is_worker,
+            isCustomer: access?.is_customer,
+            canAccessOffice: access?.can_access_office,
+            canAccessWorker: access?.can_access_worker,
+            canAccessCustomerPortal: access?.can_access_customer_portal,
+            defaultRoute: access?.default_route,
+            showToggle: access?.show_toggle,
+          });
+          
           if (access) {
-            // Navigate to user's appropriate default route
+            console.log(`✅ [${timestamp}] AUTH_CHECK: Redirecting authenticated user`, {
+              userId: session.user.id,
+              destination: access.default_route,
+            });
             navigate(access.default_route, { replace: true });
           } else {
-            // No access - let them see login
+            console.warn(`⚠️ [${timestamp}] AUTH_CHECK: No access data - showing login`, {
+              userId: session.user.id,
+            });
             setIsCheckingAuth(false);
           }
         } else {
+          console.log(`🔐 [${timestamp}] AUTH_CHECK: No active session - showing login`);
           setIsCheckingAuth(false);
         }
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error(`🚫 [${timestamp}] AUTH_CHECK: Unexpected error`, error);
         if (mounted) {
           setIsCheckingAuth(false);
         }
@@ -72,6 +103,10 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    const timestamp = new Date().toISOString();
+    const loginAttemptId = Math.random().toString(36).substring(7);
+
+    console.log(`🔐 [${timestamp}] LOGIN_START: Attempt ${loginAttemptId}`, { email });
 
     try {
       // Validate sign-in inputs
@@ -82,28 +117,46 @@ export default function Auth() {
 
       if (!validationResult.success) {
         const firstError = validationResult.error.errors[0];
+        console.log(`🚫 [${timestamp}] LOGIN_VALIDATION_FAILED: ${loginAttemptId}`, {
+          error: firstError.message,
+        });
         toast.error(firstError.message);
         setIsLoading(false);
         return;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log(`🔐 [${timestamp}] LOGIN_AUTH: Calling signInWithPassword ${loginAttemptId}`);
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email: validationResult.data.email,
         password: validationResult.data.password,
       });
 
       if (error) {
+        console.error(`🚫 [${timestamp}] LOGIN_AUTH_FAILED: ${loginAttemptId}`, {
+          error: error.message,
+          code: error.status,
+        });
         toast.error("Invalid email or password.");
-        console.error("Sign in error:", error);
         setIsLoading(false);
         return;
       }
 
+      const userId = signInData?.user?.id;
+      console.log(`✅ [${timestamp}] LOGIN_AUTH_SUCCESS: ${loginAttemptId}`, {
+        userId,
+        email: signInData?.user?.email,
+      });
+
       // Get user access using the RPC function
+      console.log(`🔐 [${timestamp}] LOGIN_ACCESS_CHECK: Fetching access info ${loginAttemptId}`);
       const { data: accessData, error: accessError } = await supabase.rpc('get_user_access_info');
 
       if (accessError) {
-        console.error("Access check error:", accessError);
+        console.error(`🚫 [${timestamp}] LOGIN_ACCESS_RPC_FAILED: ${loginAttemptId}`, {
+          error: accessError.message,
+          code: accessError.code,
+          userId,
+        });
         toast.error("Access verification error. Please try again.");
         setIsLoading(false);
         return;
@@ -112,18 +165,32 @@ export default function Auth() {
       // RPC functions return arrays, get first result
       const access = Array.isArray(accessData) && accessData.length > 0 ? accessData[0] : null;
 
-      // SECURITY: Log access decision for debugging
-      console.log("🔐 Access check result:", {
-        hasAccess: !!access,
-        canAccessOffice: access?.can_access_office,
-        canAccessWorker: access?.can_access_worker,
-        canAccessCustomerPortal: access?.can_access_customer_portal,
-        defaultRoute: access?.default_route,
-        hasRole: access?.has_role,
+      // Comprehensive access logging
+      console.log(`🔐 [${timestamp}] LOGIN_ACCESS_RESULT: ${loginAttemptId}`, {
+        userId,
+        hasAccessData: !!access,
+        rawAccessData: access,
+        accessFlags: {
+          hasRole: access?.has_role,
+          isWorker: access?.is_worker,
+          isCustomer: access?.is_customer,
+          canAccessOffice: access?.can_access_office,
+          canAccessWorker: access?.can_access_worker,
+          canAccessCustomerPortal: access?.can_access_customer_portal,
+        },
+        routing: {
+          defaultRoute: access?.default_route,
+          showToggle: access?.show_toggle,
+          customerId: access?.customer_id,
+        },
       });
 
       if (!access) {
-        console.error("🚫 SECURITY: No access data returned for user");
+        console.error(`🚫 [${timestamp}] LOGIN_NO_ACCESS: ${loginAttemptId}`, {
+          userId,
+          action: 'SIGNING_OUT',
+          reason: 'No access data returned from RPC',
+        });
         toast.error("Your account setup is incomplete. Please contact your administrator.");
         await supabase.auth.signOut();
         setIsLoading(false);
@@ -132,9 +199,11 @@ export default function Auth() {
 
       // SECURITY: Verify user has at least one access flag
       if (!access.can_access_office && !access.can_access_worker && !access.can_access_customer_portal) {
-        console.error("🚫 SECURITY: User has no access flags set:", {
+        console.error(`🚫 [${timestamp}] LOGIN_NO_ACCESS_FLAGS: ${loginAttemptId}`, {
           userId: access.user_id,
           hasRole: access.has_role,
+          action: 'SIGNING_OUT',
+          reason: 'User has no access flags (can_access_office/worker/customer_portal all false)',
         });
         toast.error("Your account setup is incomplete. Please contact your administrator.");
         await supabase.auth.signOut();
@@ -144,7 +213,13 @@ export default function Auth() {
 
       // SECURITY: Verify default route is valid for the user's access level
       if (access.default_route === '/dashboard' && !access.can_access_office) {
-        console.error("🚫 SECURITY: Invalid route assignment - worker directed to office");
+        console.error(`🚫 [${timestamp}] LOGIN_ROUTE_MISMATCH: ${loginAttemptId}`, {
+          userId: access.user_id,
+          defaultRoute: access.default_route,
+          canAccessOffice: access.can_access_office,
+          action: 'SIGNING_OUT',
+          reason: 'Worker-only user has office route assigned',
+        });
         toast.error("Access configuration error. Please contact your administrator.");
         await supabase.auth.signOut();
         setIsLoading(false);
@@ -152,6 +227,7 @@ export default function Auth() {
       }
 
       // Check if user needs to reset password
+      console.log(`🔐 [${timestamp}] LOGIN_PASSWORD_CHECK: Checking password reset status ${loginAttemptId}`);
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser) {
         const { data: profileData } = await supabase
@@ -161,6 +237,10 @@ export default function Auth() {
           .single();
 
         if (profileData?.needs_password_reset) {
+          console.log(`🔐 [${timestamp}] LOGIN_PASSWORD_RESET_REQUIRED: ${loginAttemptId}`, {
+            userId: currentUser.id,
+            redirectTo: '/first-password-reset',
+          });
           toast.info("Please reset your password to continue");
           navigate("/first-password-reset", { replace: true });
           setIsLoading(false);
@@ -171,12 +251,30 @@ export default function Auth() {
       // Clear cached access data to ensure fresh data
       queryClient.removeQueries({ queryKey: ["user-access"] });
       
+      console.log(`✅ [${timestamp}] LOGIN_SUCCESS: ${loginAttemptId}`, {
+        userId,
+        email: signInData?.user?.email,
+        destination: access.default_route,
+        accessProfile: {
+          hasRole: access.has_role,
+          isWorker: access.is_worker,
+          isCustomer: access.is_customer,
+          canAccessOffice: access.can_access_office,
+          canAccessWorker: access.can_access_worker,
+          canAccessCustomerPortal: access.can_access_customer_portal,
+          showToggle: access.show_toggle,
+        },
+      });
+      
       // Show success and redirect to appropriate dashboard
       toast.success("Welcome back!");
       navigate(access.default_route, { replace: true });
     } catch (error: any) {
+      console.error(`🚫 [${timestamp}] LOGIN_UNEXPECTED_ERROR: ${loginAttemptId}`, {
+        error: error.message,
+        stack: error.stack,
+      });
       toast.error("An unexpected error occurred. Please try again.");
-      console.error("Auth error:", error);
       setIsLoading(false);
     }
   };
