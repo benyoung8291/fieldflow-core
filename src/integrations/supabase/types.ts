@@ -9726,15 +9726,15 @@ export type Database = {
         | {
             Args: {
               p_current_date: string
-              p_frequency: string
-              p_original_day_of_month?: number
+              p_frequency: Database["public"]["Enums"]["recurrence_frequency"]
             }
             Returns: string
           }
         | {
             Args: {
               p_current_date: string
-              p_frequency: Database["public"]["Enums"]["recurrence_frequency"]
+              p_frequency: string
+              p_original_day_of_month?: number
             }
             Returns: string
           }

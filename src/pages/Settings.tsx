@@ -33,7 +33,8 @@ import {
   Database,
   Radio,
   Bell,
-  Bug
+  Bug,
+  Eye
 } from "lucide-react";
 import CRMStatusesTab from "@/components/settings/CRMStatusesTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
@@ -60,6 +61,7 @@ import { PerformanceMonitorTab } from "@/components/settings/PerformanceMonitorT
 import APInvoiceSettingsTab from "@/components/settings/APInvoiceSettingsTab";
 import { BugReportsList } from "@/components/settings/BugReportsList";
 import { TeamsTab } from "@/components/settings/TeamsTab";
+import { AccessLogsTab } from "@/components/settings/AccessLogsTab";
 import { TeamOnboardingSteps } from "@/components/settings/TeamOnboardingSteps";
 import { cn } from "@/lib/utils";
 import { Receipt, Shield as ShieldCheck, FileCheck } from "lucide-react";
@@ -140,6 +142,7 @@ const settingsNavigation: SettingsNavGroup[] = [
   {
     group: "Advanced",
     items: [
+      { title: "Access Logs", value: "access-logs", icon: Eye },
       { title: "Bug Reports", value: "bug-reports", icon: Bug },
       { title: "Activity Log", value: "activity-log", icon: Activity },
       { title: "Change History", value: "changelog", icon: ScrollText },
@@ -636,6 +639,10 @@ export default function Settings() {
                   <ActivityLogTab />
                 </CardContent>
               </Card>
+            )}
+
+            {activeTab === "access-logs" && (
+              <AccessLogsTab />
             )}
 
             {activeTab === "bug-reports" && (

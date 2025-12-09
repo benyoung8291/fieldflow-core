@@ -49,6 +49,7 @@ import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 import { PermissionButton, PermissionGate } from "@/components/permissions";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -119,6 +120,9 @@ export default function ServiceOrders() {
   const queryClient = useQueryClient();
   const { isMobile } = useViewMode();
   const { onlineUsers, updateField } = usePresence({ page: "service-orders" });
+  
+  // Log list page access
+  useLogListPageAccess("service_orders");
   
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
