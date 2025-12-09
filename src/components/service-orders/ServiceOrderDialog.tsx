@@ -1,5 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,6 +89,9 @@ export default function ServiceOrderDialog({
   const [isLocationUserChanged, setIsLocationUserChanged] = useState(false);
   const [taxRate, setTaxRate] = useState<number>(10);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const initialFormDataRef = useRef<typeof formData | null>(null);
+  const initialLineItemsRef = useRef<LineItem[]>([]);
   
   const { onlineUsers, updateField, updateCursorPosition } = usePresence({
     page: "service-order-dialog",
@@ -741,8 +754,77 @@ export default function ServiceOrderDialog({
 
   const totals = calculateTotals();
 
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = (): boolean => {
+    // For new orders, check if any meaningful data has been entered
+    if (!orderId) {
+      const hasFormData = formData.customer_id || formData.title || formData.description;
+      const hasLineItems = lineItems.length > 0;
+      return Boolean(hasFormData || hasLineItems);
+    }
+    
+    // For existing orders, compare against initial state
+    if (!initialFormDataRef.current) return false;
+    
+    const formChanged = JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current);
+    const lineItemsChanged = JSON.stringify(lineItems) !== JSON.stringify(initialLineItemsRef.current);
+    
+    return formChanged || lineItemsChanged;
+  };
+
+  const handleCloseAttempt = (shouldClose: boolean) => {
+    if (!shouldClose) return;
+    
+    if (hasUnsavedChanges()) {
+      setShowDiscardConfirm(true);
+    } else {
+      onOpenChange(false);
+    }
+  };
+
+  const handleConfirmDiscard = () => {
+    setShowDiscardConfirm(false);
+    onOpenChange(false);
+  };
+
+  // Store initial state when order is loaded
+  useEffect(() => {
+    if (open && orderId && !loading && formData.customer_id) {
+      initialFormDataRef.current = { ...formData };
+      initialLineItemsRef.current = lineItems.map(item => ({ ...item }));
+    }
+  }, [open, orderId, loading, formData.customer_id]);
+
+  // Reset initial refs when dialog closes
+  useEffect(() => {
+    if (!open) {
+      initialFormDataRef.current = null;
+      initialLineItemsRef.current = [];
+    }
+  }, [open]);
+
   return (
     <>
+      <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in this service order form. Are you sure you want to discard them?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continue Editing</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDiscard}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <ServiceOrderTemplatesDialog
         open={templatesDialogOpen}
         onOpenChange={setTemplatesDialogOpen}
@@ -793,8 +875,22 @@ export default function ServiceOrderDialog({
         </>
       )}
 
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={open} onOpenChange={handleCloseAttempt}>
+        <DialogContent 
+          className="max-w-6xl max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => {
+            if (hasUnsavedChanges()) {
+              e.preventDefault();
+              setShowDiscardConfirm(true);
+            }
+          }}
+          onEscapeKeyDown={(e) => {
+            if (hasUnsavedChanges()) {
+              e.preventDefault();
+              setShowDiscardConfirm(true);
+            }
+          }}
+        >
           <DialogHeader>
             <div className="flex items-center gap-2">
               <DialogTitle>{orderId ? "Edit" : "Create"} Service Order</DialogTitle>
