@@ -10152,7 +10152,14 @@ export type Database = {
       chat_channel_type: "public" | "private" | "dm" | "context"
       chat_member_role: "owner" | "admin" | "member"
       customer_portal_role: "full_access" | "supervisor" | "basic"
-      permission_type: "view" | "create" | "edit" | "delete"
+      permission_type:
+        | "view"
+        | "create"
+        | "edit"
+        | "delete"
+        | "approve"
+        | "export"
+        | "import"
       recurrence_frequency:
         | "daily"
         | "weekly"
@@ -10360,7 +10367,15 @@ export const Constants = {
       chat_channel_type: ["public", "private", "dm", "context"],
       chat_member_role: ["owner", "admin", "member"],
       customer_portal_role: ["full_access", "supervisor", "basic"],
-      permission_type: ["view", "create", "edit", "delete"],
+      permission_type: [
+        "view",
+        "create",
+        "edit",
+        "delete",
+        "approve",
+        "export",
+        "import",
+      ],
       recurrence_frequency: [
         "daily",
         "weekly",

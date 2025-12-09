@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import FieldReportDialog from '@/components/field-reports/FieldReportDialog';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PermissionButton } from '@/components/permissions/PermissionButton';
 
 export default function FieldReports() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -174,10 +176,14 @@ export default function FieldReports() {
       <div className="flex-1 flex flex-col h-full">
         <div className="flex items-center justify-between p-4 border-b">
           <h1 className="text-2xl font-bold">Field Reports</h1>
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <PermissionButton 
+            module="field_reports" 
+            permission="create"
+            onClick={() => setShowCreateDialog(true)}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create Report
-          </Button>
+          </PermissionButton>
         </div>
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
@@ -267,23 +273,40 @@ export default function FieldReports() {
                 </div>
                 <div className="flex gap-2">
                   {selectedReport.status !== 'approved' && (
-                    <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
+                    <PermissionButton 
+                      module="field_reports" 
+                      permission="edit"
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setEditMode(!editMode)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       {editMode ? 'View' : 'Edit'}
-                    </Button>
+                    </PermissionButton>
                   )}
                   <Button variant="outline" size="sm" onClick={handleGeneratePDF}>
                     <Download className="h-4 w-4 mr-2" />
                     Generate PDF
                   </Button>
                   {selectedReport.status === 'approved' ? (
-                    <Button variant="outline" size="sm" onClick={handleUnapproveReport}>
+                    <PermissionButton 
+                      module="field_reports" 
+                      permission="edit"
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleUnapproveReport}
+                    >
                       Unapprove Report
-                    </Button>
+                    </PermissionButton>
                   ) : (
-                    <Button size="sm" onClick={handleApproveReport}>
+                    <PermissionButton 
+                      module="field_reports" 
+                      permission="edit"
+                      size="sm" 
+                      onClick={handleApproveReport}
+                    >
                       Approve Report
-                    </Button>
+                    </PermissionButton>
                   )}
                 </div>
               </div>

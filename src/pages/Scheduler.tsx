@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import DeleteDropZone from "@/components/scheduler/DeleteDropZone";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Scheduler() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -75,6 +76,9 @@ export default function Scheduler() {
   
   const { onlineUsers, updateCursorPosition } = usePresence({ page: "scheduler" });
   const { checkConflict, checkAvailability } = useAppointmentConflicts();
+  const { hasPermission } = usePermissions();
+  const canCreateAppointments = hasPermission('appointments', 'create');
+  const canEditAppointments = hasPermission('appointments', 'edit');
   
   // Fetch subcontractor workers
   const { data: subcontractorWorkers = [] } = useSubcontractorWorkers(stateFilter);

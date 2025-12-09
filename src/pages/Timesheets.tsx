@@ -18,6 +18,8 @@ import AppointmentTimeLogsMap from "@/components/time-logs/AppointmentTimeLogsMa
 import TimeLogsSplitView from "@/components/time-logs/TimeLogsSplitView";
 import { getAppointmentLocation } from "@/lib/appointmentLocation";
 import { UnprocessedTimeLogsTable } from "@/components/timesheets/UnprocessedTimeLogsTable";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export default function Timesheets() {
   const navigate = useNavigate();
@@ -219,7 +221,9 @@ export default function Timesheets() {
               Manage worker timesheets for payroll processing
             </p>
           </div>
-          <CreateTimesheetDialog selectedWeekStart={selectedWeek} />
+          <PermissionGate module="timesheets" permission="create">
+            <CreateTimesheetDialog selectedWeekStart={selectedWeek} />
+          </PermissionGate>
         </div>
 
         {/* Week Navigation */}
