@@ -50,6 +50,7 @@ import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 import { PermissionButton, PermissionGate } from "@/components/permissions";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
+import { StateFilter } from "@/components/filters/StateFilter";
 
 const statusColors = {
   draft: "bg-muted text-muted-foreground",
@@ -135,6 +136,7 @@ export default function ServiceOrders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortField, setSortField] = useState<'order_number' | 'created_at' | 'preferred_date' | 'customer'>('order_number');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -208,7 +210,7 @@ export default function ServiceOrders() {
   }, [queryClient]);
 
   const { data: ordersResponse, isLoading, refetch } = useQuery({
-    queryKey: ["service_orders", debouncedSearch, statusFilter, priorityFilter, customerFilter, sortField, sortDirection, pagination.currentPage, pagination.pageSize],
+    queryKey: ["service_orders", debouncedSearch, statusFilter, priorityFilter, customerFilter, stateFilter, sortField, sortDirection, pagination.currentPage, pagination.pageSize],
     queryFn: async () => {
       const { from, to } = pagination.getRange();
       
@@ -230,7 +232,7 @@ export default function ServiceOrders() {
           preferred_date,
           contract_id,
           customers!service_orders_customer_id_fkey(name),
-          customer_locations!service_orders_customer_location_id_fkey(name),
+          customer_locations!service_orders_customer_location_id_fkey(name, state),
           appointments(count),
           full_appointments:appointments(
             id,
@@ -284,33 +286,44 @@ export default function ServiceOrders() {
     },
   });
 
-  // Client-side filtering for line items and customer name (after database query)
+  // Client-side filtering for line items, customer name, and state (after database query)
   const filteredOrders = useMemo(() => {
-    const orders = ordersResponse?.orders || [];
-    if (!debouncedSearch.trim()) return orders;
+    let orders = ordersResponse?.orders || [];
     
-    const searchLower = debouncedSearch.toLowerCase();
-    
-    return orders.filter((order: any) => {
-      // Already matched by DB query for order_number, title, work_order_number, description
-      // Additional client-side matching for customer name and line items
-      const customerMatch = order.customers?.name?.toLowerCase().includes(searchLower);
-      const lineItemMatch = order.service_order_line_items?.some(
-        (item: any) => item.description?.toLowerCase().includes(searchLower)
+    // Apply state filter - filter by location state
+    if (stateFilter !== "all") {
+      orders = orders.filter((order: any) => 
+        order.customer_locations?.state === stateFilter
       );
+    }
+    
+    // Apply search filter
+    if (debouncedSearch.trim()) {
+      const searchLower = debouncedSearch.toLowerCase();
       
-      // If already matched by DB (order_number, title, work_order_number, description contains search)
-      // or matches customer/line items
-      return (
-        order.order_number?.toLowerCase().includes(searchLower) ||
-        order.title?.toLowerCase().includes(searchLower) ||
-        order.work_order_number?.toLowerCase().includes(searchLower) ||
-        order.description?.toLowerCase().includes(searchLower) ||
-        customerMatch ||
-        lineItemMatch
-      );
-    });
-  }, [ordersResponse?.orders, debouncedSearch]);
+      orders = orders.filter((order: any) => {
+        // Already matched by DB query for order_number, title, work_order_number, description
+        // Additional client-side matching for customer name and line items
+        const customerMatch = order.customers?.name?.toLowerCase().includes(searchLower);
+        const lineItemMatch = order.service_order_line_items?.some(
+          (item: any) => item.description?.toLowerCase().includes(searchLower)
+        );
+        
+        // If already matched by DB (order_number, title, work_order_number, description contains search)
+        // or matches customer/line items
+        return (
+          order.order_number?.toLowerCase().includes(searchLower) ||
+          order.title?.toLowerCase().includes(searchLower) ||
+          order.work_order_number?.toLowerCase().includes(searchLower) ||
+          order.description?.toLowerCase().includes(searchLower) ||
+          customerMatch ||
+          lineItemMatch
+        );
+      });
+    }
+    
+    return orders;
+  }, [ordersResponse?.orders, debouncedSearch, stateFilter]);
 
   const orders = filteredOrders;
   const totalCount = ordersResponse?.count || 0;
@@ -634,7 +647,7 @@ export default function ServiceOrders() {
               />
             </div>
             
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-10 border-none bg-muted/50">
                   <SelectValue placeholder="All Statuses" />
@@ -674,6 +687,12 @@ export default function ServiceOrders() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <StateFilter 
+                value={stateFilter} 
+                onChange={setStateFilter}
+                triggerClassName="h-10 border-none bg-muted/50"
+              />
             </div>
 
             {/* Quick Sort Options */}
