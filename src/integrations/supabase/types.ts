@@ -10130,6 +10130,7 @@ export type Database = {
         | "invoices"
         | "user_management"
         | "integrations"
+        | "recurring_invoices"
       app_role:
         | "tenant_admin"
         | "supervisor"
@@ -10342,6 +10343,7 @@ export const Constants = {
         "invoices",
         "user_management",
         "integrations",
+        "recurring_invoices",
       ],
       app_role: [
         "tenant_admin",
