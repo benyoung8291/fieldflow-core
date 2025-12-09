@@ -150,9 +150,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { data: access, isLoading, error } = useUserAccess();
   const location = window.location.pathname;
   
-  // Show loading while checking access
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  // Only show loading when we have NO cached data (initial load)
+  // During background refetches (isLoading but has cached data), show children
+  if (isLoading && !access) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   // If there's an error (user not authenticated), redirect to auth
@@ -223,8 +228,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const RedirectToDefaultRoute = () => {
   const { data: access, isLoading, error } = useUserAccess();
   
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  // Only show loading when we have NO cached data (initial load)
+  if (isLoading && !access) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
   
   // SECURITY: If no access data or error, redirect to auth - never default to office
