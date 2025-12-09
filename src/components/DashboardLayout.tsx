@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { LogOut, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -113,49 +113,61 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     }));
   }, [menuItems, canView, permissionsLoading, hasLoadedPermissions]);
 
+  // Check if a folder contains the active route
+  const folderContainsActiveRoute = (item: any): boolean => {
+    if (!item.children) return false;
+    return item.children.some((child: any) => child.path && location.pathname === child.path);
+  };
+
   const renderMenuContent = () => {
     const renderMenuItem = (item: any) => {
       const isActive = item.path && location.pathname === item.path;
       const children = item.children || [];
       const isExpanded = expandedFolders.has(item.id);
       const Icon = item.iconComponent;
+      const hasActiveChild = folderContainsActiveRoute(item);
+      const isChatItem = item.path === "/chat";
 
       // Render folder with popover when collapsed - click-based for reliability
       if (item.is_folder && sidebarCollapsed && children.length > 0) {
         return (
           <div key={item.id}>
             <Popover open={openPopover === item.id} onOpenChange={(open) => setOpenPopover(open ? item.id : null)}>
-              <Tooltip delayDuration={0}>
+              <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <PopoverTrigger asChild>
                     <button
                       onClick={() => setOpenPopover(openPopover === item.id ? null : item.id)}
                       className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 w-full justify-center px-2",
-                        openPopover === item.id && "bg-sidebar-accent",
-                        "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        "relative flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-sm font-medium transition-all duration-200",
+                        openPopover === item.id && "bg-sidebar-accent/80 scale-105",
+                        hasActiveChild 
+                          ? "bg-sidebar-primary/20 text-sidebar-primary-foreground ring-2 ring-sidebar-primary/50" 
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:scale-105"
                       )}
                     >
                       <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                      {/* Folder indicator dot */}
+                      <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-sidebar-foreground/40" />
                     </button>
                   </PopoverTrigger>
                 </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
+                <TooltipContent side="right" className="font-medium" sideOffset={8}>
                   {item.label}
                 </TooltipContent>
               </Tooltip>
               <PopoverContent 
                 side="right" 
                 align="start" 
-                sideOffset={4}
-                className="w-56 p-2 z-[9999]"
+                sideOffset={8}
+                className="w-56 p-2 z-[9999] animate-in slide-in-from-left-2 duration-200"
                 onInteractOutside={() => setOpenPopover(null)}
               >
                 <div className="space-y-1">
-                  <div className="px-2 py-1.5 text-sm font-semibold text-foreground">
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border mb-2">
                     {item.label}
                   </div>
-                  {children.map((child) => {
+                  {children.map((child: any) => {
                     const childIsActive = child.path && location.pathname === child.path;
                     const ChildIcon = child.iconComponent;
                     return child.path ? (
@@ -164,14 +176,14 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
                         to={child.path}
                         onClick={() => setOpenPopover(null)}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-left",
+                          "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150 w-full text-left",
                           childIsActive
-                            ? "bg-primary text-primary-foreground"
-                            : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-foreground hover:bg-accent/80 hover:translate-x-0.5"
                         )}
                       >
-                        <ChildIcon className="h-4 w-4" style={child.color && child.color.trim() ? { color: child.color } : undefined} />
-                        {child.label}
+                        <ChildIcon className="h-4 w-4 flex-shrink-0" style={child.color && child.color.trim() ? { color: child.color } : undefined} />
+                        <span className="truncate">{child.label}</span>
                       </Link>
                     ) : null;
                   })}
@@ -187,35 +199,46 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
         return (
           <div key={item.id}>
             {sidebarCollapsed ? (
-              <Tooltip delayDuration={0}>
+              <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <NavLink
                     to={item.path}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1 justify-center px-2",
-                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      "relative flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-sm font-medium transition-all duration-200",
+                      "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:scale-105"
                     )}
-                    activeClassName="bg-sidebar-primary text-sidebar-primary-foreground"
+                    activeClassName="bg-sidebar-primary text-sidebar-primary-foreground shadow-md scale-105"
                   >
                     <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                    {/* Unread badge for chat in collapsed mode */}
+                    {isChatItem && totalUnread > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground ring-2 ring-sidebar-background">
+                        {totalUnread > 9 ? "9+" : totalUnread}
+                      </span>
+                    )}
                   </NavLink>
                 </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  {item.label}
+                <TooltipContent side="right" className="font-medium" sideOffset={8}>
+                  <span className="flex items-center gap-2">
+                    {item.label}
+                    {isChatItem && totalUnread > 0 && (
+                      <span className="text-xs text-muted-foreground">({totalUnread} unread)</span>
+                    )}
+                  </span>
                 </TooltipContent>
               </Tooltip>
             ) : (
               <NavLink
                 to={item.path}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
-                  "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                  "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:translate-x-0.5"
                 )}
-                activeClassName="bg-sidebar-primary text-sidebar-primary-foreground"
+                activeClassName="bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
               >
-                <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
-                {item.label}
-                {item.path === "/chat" && totalUnread > 0 && (
+                <Icon className="h-5 w-5 flex-shrink-0" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                <span className="truncate">{item.label}</span>
+                {isChatItem && totalUnread > 0 && (
                   <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
                     {totalUnread > 99 ? "99+" : totalUnread}
                   </span>
@@ -229,22 +252,24 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
       // Folder items stay as buttons for toggling
       return (
         <div key={item.id}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             {sidebarCollapsed ? (
-              <Tooltip delayDuration={0}>
+              <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => toggleFolder(item.id)}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
-                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      "justify-center px-2"
+                      "relative flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-sm font-medium transition-all duration-200",
+                      hasActiveChild 
+                        ? "bg-sidebar-primary/20 text-sidebar-primary-foreground ring-2 ring-sidebar-primary/50" 
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:scale-105"
                     )}
                   >
                     <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                    <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-sidebar-foreground/40" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
+                <TooltipContent side="right" className="font-medium" sideOffset={8}>
                   {item.label}
                 </TooltipContent>
               </Tooltip>
@@ -252,39 +277,44 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
               <button
                 onClick={() => toggleFolder(item.id)}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex-1",
-                  "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+                  hasActiveChild 
+                    ? "bg-sidebar-primary/10 text-sidebar-foreground" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/60"
                 )}
               >
-                <div className="mr-1">
-                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
+                <div className={cn(
+                  "transition-transform duration-200",
+                  isExpanded && "rotate-90"
+                )}>
+                  <ChevronRightIcon className="h-4 w-4" />
                 </div>
-                <Icon className="h-5 w-5" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
-                {item.label}
+                <Icon className="h-5 w-5 flex-shrink-0" style={item.color && item.color.trim() ? { color: item.color } : undefined} />
+                <span className="truncate">{item.label}</span>
               </button>
             )}
           </div>
           
-          {/* Render children when folder is expanded */}
+          {/* Render children when folder is expanded with animation */}
           {item.is_folder && isExpanded && children.length > 0 && !sidebarCollapsed && (
             <div 
-              className="ml-6 mt-1 space-y-1 border-l-2 pl-2" 
+              className="ml-5 mt-1 space-y-0.5 border-l-2 pl-3 animate-in slide-in-from-top-2 duration-200" 
               style={item.color && item.color.trim() ? { borderColor: item.color } : { borderColor: 'hsl(var(--sidebar-border))' }}
             >
-              {children.map((child) => {
+              {children.map((child: any) => {
                 const ChildIcon = child.iconComponent;
                 return child.path ? (
                   <NavLink
                     key={child.id}
                     to={child.path}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full text-left",
-                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 w-full text-left",
+                      "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:translate-x-0.5"
                     )}
-                    activeClassName="bg-sidebar-primary text-sidebar-primary-foreground"
+                    activeClassName="bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                   >
-                    <ChildIcon className="h-4 w-4" style={child.color && child.color.trim() ? { color: child.color } : undefined} />
-                    {child.label}
+                    <ChildIcon className="h-4 w-4 flex-shrink-0" style={child.color && child.color.trim() ? { color: child.color } : undefined} />
+                    <span className="truncate">{child.label}</span>
                   </NavLink>
                 ) : null;
               })}
@@ -295,7 +325,7 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
     };
 
     return (
-      <TooltipProvider>
+      <TooltipProvider delayDuration={100}>
         <div className="space-y-1">
           {filteredMenuItems.map((item) => renderMenuItem(item))}
         </div>
@@ -314,36 +344,49 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
       {/* Sidebar - Desktop only, completely hidden in mobile view */}
       {!isMobile && (
         <aside className={cn(
-          "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 flex-shrink-0 z-50",
-          sidebarCollapsed ? "w-20" : "w-64"
+          "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out flex-shrink-0 z-50",
+          sidebarCollapsed ? "w-16" : "w-64"
         )}>
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 px-6 py-8">
+          {/* Header - compact in collapsed state */}
+          <div className={cn(
+            "flex-shrink-0 transition-all duration-300",
+            sidebarCollapsed ? "px-3 py-4" : "px-4 py-6"
+          )}>
             <div className={cn(
               "flex items-center",
-              sidebarCollapsed ? "justify-center" : "justify-between"
+              sidebarCollapsed ? "justify-center" : "gap-3"
             )}>
+              <div className={cn(
+                "rounded-lg bg-primary flex items-center justify-center transition-all duration-200 shadow-md",
+                sidebarCollapsed ? "h-9 w-9" : "h-10 w-10"
+              )}>
+                <span className={cn(
+                  "text-primary-foreground font-bold",
+                  sidebarCollapsed ? "text-sm" : "text-lg"
+                )}>SP</span>
+              </div>
               {!sidebarCollapsed && (
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-lg">SP</span>
-                  </div>
-                  <h1 className="text-xl font-bold text-sidebar-foreground">Service Pulse</h1>
-                </div>
-              )}
-              {sidebarCollapsed && (
-                <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-lg">SP</span>
-                </div>
+                <h1 className="text-lg font-bold text-sidebar-foreground truncate">Service Pulse</h1>
               )}
             </div>
           </div>
           
-          <nav className="flex-1 flex flex-col gap-2 px-6 overflow-y-auto">
+          {/* Navigation */}
+          <nav className={cn(
+            "flex-1 flex flex-col gap-1 overflow-y-auto transition-all duration-300",
+            sidebarCollapsed ? "px-3" : "px-3"
+          )}>
             {(menuLoading || permissionsLoading || !hasLoadedPermissions) ? (
               <div className="space-y-2">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-10 bg-muted/50 animate-pulse rounded-lg" />
+                  <div 
+                    key={i} 
+                    className={cn(
+                      "bg-sidebar-accent/30 animate-pulse rounded-lg",
+                      sidebarCollapsed ? "h-10 w-10 mx-auto" : "h-10"
+                    )} 
+                  />
                 ))}
               </div>
             ) : (
@@ -351,31 +394,49 @@ export default function DashboardLayout({ children, showRightSidebar = false, di
             )}
           </nav>
           
-          <div className="flex-shrink-0 border-t border-sidebar-border px-6 py-4 bg-sidebar">
+          {/* Footer */}
+          <div className={cn(
+            "flex-shrink-0 border-t border-sidebar-border bg-sidebar transition-all duration-300",
+            sidebarCollapsed ? "px-3 py-3" : "px-3 py-4"
+          )}>
             {!sidebarCollapsed && (
-              <div className="text-[10px] text-muted-foreground/40 text-center mb-2">
+              <div className="text-[10px] text-sidebar-foreground/30 text-center mb-2">
                 v{APP_VERSION}
               </div>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className={cn(
-                "w-full hover:bg-sidebar-accent",
-                sidebarCollapsed ? "px-2" : ""
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className={cn(
+                    "transition-all duration-200 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/60",
+                    sidebarCollapsed 
+                      ? "w-10 h-10 p-0 mx-auto flex items-center justify-center" 
+                      : "w-full justify-start gap-2"
+                  )}
+                >
+                  <div className={cn(
+                    "transition-transform duration-200",
+                    sidebarCollapsed && "rotate-180"
+                  )}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </div>
+                  {!sidebarCollapsed && (
+                    <span className="text-xs">Collapse</span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              {sidebarCollapsed && (
+                <TooltipContent side="right" sideOffset={8}>
+                  <span className="flex items-center gap-2">
+                    Expand sidebar
+                    <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted rounded">⌘B</kbd>
+                  </span>
+                </TooltipContent>
               )}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {sidebarCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <>
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Collapse
-                </>
-              )}
-            </Button>
+            </Tooltip>
           </div>
         </div>
         </aside>
