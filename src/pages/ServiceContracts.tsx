@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar, DollarSign, FileText, TrendingUp, RefreshCw, Plus, ArrowUpDown, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { format, addMonths, parseISO, addWeeks } from "date-fns";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { StateFilter } from "@/components/filters/StateFilter";
 import RenewContractDialog from "@/components/quotes/RenewContractDialog";
 import ServiceContractDialog from "@/components/contracts/ServiceContractDialog";
 import ImportContractDialog from "@/components/contracts/ImportContractDialog";
@@ -35,6 +36,7 @@ export default function ServiceContracts() {
   const [filterText, setFilterText] = useState("");
   const [genSortBy, setGenSortBy] = useState<string>("date");
   const [genSortOrder, setGenSortOrder] = useState<"asc" | "desc">("asc");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const [genFilterText, setGenFilterText] = useState("");
 
   // Log list page access for audit trail
@@ -48,7 +50,10 @@ export default function ServiceContracts() {
         .select(`
           *,
           customers (name),
-          service_contract_line_items (*)
+          service_contract_line_items (
+            *,
+            customer_locations (state)
+          )
         `)
         .is("archived_at", null)
         .order("created_at", { ascending: false });
@@ -158,17 +163,30 @@ export default function ServiceContracts() {
   };
 
   // Filter and sort active contracts
-  let activeContracts = contracts?.filter((c: any) => c.status === "active") || [];
-  
-  // Apply text filter
-  if (filterText) {
-    const filterLower = filterText.toLowerCase();
-    activeContracts = activeContracts.filter((c: any) => 
-      c.contract_number?.toLowerCase().includes(filterLower) ||
-      c.customers?.name?.toLowerCase().includes(filterLower) ||
-      c.title?.toLowerCase().includes(filterLower)
-    );
-  }
+  let activeContracts = useMemo(() => {
+    let filtered = contracts?.filter((c: any) => c.status === "active") || [];
+    
+    // Apply state filter - show contracts that have ANY line item with a location in the selected state
+    if (stateFilter !== "all") {
+      filtered = filtered.filter((c: any) => 
+        c.service_contract_line_items?.some((item: any) => 
+          item.customer_locations?.state === stateFilter
+        )
+      );
+    }
+    
+    // Apply text filter
+    if (filterText) {
+      const filterLower = filterText.toLowerCase();
+      filtered = filtered.filter((c: any) => 
+        c.contract_number?.toLowerCase().includes(filterLower) ||
+        c.customers?.name?.toLowerCase().includes(filterLower) ||
+        c.title?.toLowerCase().includes(filterLower)
+      );
+    }
+    
+    return filtered;
+  }, [contracts, stateFilter, filterText]);
   
   // Apply sorting
   activeContracts = [...activeContracts].sort((a: any, b: any) => {
@@ -457,11 +475,19 @@ export default function ServiceContracts() {
                       className="pl-8"
                     />
                   </div>
-                  {filterText && (
+                  <StateFilter 
+                    value={stateFilter} 
+                    onChange={setStateFilter}
+                    triggerClassName="w-[180px]"
+                  />
+                  {(filterText || stateFilter !== "all") && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setFilterText("")}
+                      onClick={() => {
+                        setFilterText("");
+                        setStateFilter("all");
+                      }}
                     >
                       Clear
                     </Button>
