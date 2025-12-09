@@ -1,19 +1,19 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, RefreshCw, Check, X, Bot, Hand } from "lucide-react";
+import { ArrowLeft, Upload, RefreshCw, Check, X, Bot, Hand, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import Fuse from "fuse.js";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
+import { SelectWithSearch } from "@/components/ui/select-with-search";
 
 interface LocationMapping {
   id: string;
@@ -40,11 +40,14 @@ interface Location {
   customer_id: string;
 }
 
+const ROWS_PER_PAGE = 50;
+
 export default function ImportLocations() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const [isAutoMatching, setIsAutoMatching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: mappings, isLoading: mappingsLoading } = useQuery({
     queryKey: ['location-mappings'],
@@ -85,6 +88,41 @@ export default function ImportLocations() {
     }
   });
 
+  // Memoize customer options for SelectWithSearch
+  const customerOptions = useMemo(() => {
+    return customers?.map(c => ({ value: c.id, label: c.name })) || [];
+  }, [customers]);
+
+  // Memoize locations grouped by customer for quick lookup
+  const locationsByCustomer = useMemo(() => {
+    const map = new Map<string, Location[]>();
+    locations?.forEach(loc => {
+      const existing = map.get(loc.customer_id) || [];
+      existing.push(loc);
+      map.set(loc.customer_id, existing);
+    });
+    return map;
+  }, [locations]);
+
+  // Memoize stats calculation
+  const stats = useMemo(() => ({
+    total: mappings?.length || 0,
+    matched: mappings?.filter(m => m.match_status === 'matched' || m.match_status === 'manual').length || 0,
+    pending: mappings?.filter(m => m.match_status === 'pending').length || 0
+  }), [mappings]);
+
+  // Memoize paginated data
+  const { paginatedMappings, totalPages } = useMemo(() => {
+    if (!mappings) return { paginatedMappings: [], totalPages: 0 };
+    const total = Math.ceil(mappings.length / ROWS_PER_PAGE);
+    const start = (currentPage - 1) * ROWS_PER_PAGE;
+    const end = start + ROWS_PER_PAGE;
+    return {
+      paginatedMappings: mappings.slice(start, end),
+      totalPages: total
+    };
+  }, [mappings, currentPage]);
+
   const updateMappingMutation = useMutation({
     mutationFn: async ({ id, customer_id, location_id, is_manually_mapped }: { 
       id: string; 
@@ -106,8 +144,36 @@ export default function ImportLocations() {
       
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['location-mappings'] });
+    // Optimistic update
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ['location-mappings'] });
+      const previous = queryClient.getQueryData(['location-mappings']);
+      
+      queryClient.setQueryData(['location-mappings'], (old: LocationMapping[] | undefined) => {
+        if (!old) return old;
+        return old.map(m => {
+          if (m.id === variables.id) {
+            return {
+              ...m,
+              customer_id: variables.customer_id,
+              location_id: variables.location_id,
+              is_manually_mapped: variables.is_manually_mapped,
+              match_status: variables.customer_id && variables.location_id ? 'matched' : 'pending'
+            };
+          }
+          return m;
+        });
+      });
+      
+      return { previous };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['location-mappings'], context.previous);
+      }
+      toast.error("Failed to update mapping");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['import-location-stats'] });
     }
   });
@@ -128,10 +194,41 @@ export default function ImportLocations() {
       
       if (error) throw error;
     },
+    // Optimistic update
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['location-mappings'] });
+      const previous = queryClient.getQueryData(['location-mappings']);
+      
+      queryClient.setQueryData(['location-mappings'], (old: LocationMapping[] | undefined) => {
+        if (!old) return old;
+        return old.map(m => {
+          if (m.id === id) {
+            return {
+              ...m,
+              customer_id: null,
+              location_id: null,
+              match_status: 'pending',
+              match_confidence: null,
+              is_manually_mapped: false
+            };
+          }
+          return m;
+        });
+      });
+      
+      return { previous };
+    },
+    onError: (err, id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['location-mappings'], context.previous);
+      }
+      toast.error("Failed to clear mapping");
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['location-mappings'] });
-      queryClient.invalidateQueries({ queryKey: ['import-location-stats'] });
       toast.success("Match cleared");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['import-location-stats'] });
     }
   });
 
@@ -237,7 +334,7 @@ export default function ImportLocations() {
           const matchedCustomer = bestMatch.item;
           
           // Try to find matching location
-          const customerLocations = locations.filter(l => l.customer_id === matchedCustomer.id);
+          const customerLocations = locationsByCustomer.get(matchedCustomer.id) || [];
           const locationFuse = new Fuse(customerLocations, {
             keys: ['name'],
             threshold: 0.4,
@@ -276,9 +373,9 @@ export default function ImportLocations() {
     queryClient.invalidateQueries({ queryKey: ['location-mappings'] });
     queryClient.invalidateQueries({ queryKey: ['import-location-stats'] });
     setIsAutoMatching(false);
-  }, [mappings, customers, locations, queryClient]);
+  }, [mappings, customers, locations, locationsByCustomer, queryClient]);
 
-  const getConfidenceBadge = (confidence: number | null) => {
+  const getConfidenceBadge = useCallback((confidence: number | null) => {
     if (confidence === null) return null;
     
     if (confidence >= 80) {
@@ -288,18 +385,13 @@ export default function ImportLocations() {
     } else {
       return <Badge variant="destructive">{confidence}%</Badge>;
     }
-  };
+  }, []);
 
-  const getLocationsForCustomer = (customerId: string | null) => {
-    if (!customerId || !locations) return [];
-    return locations.filter(l => l.customer_id === customerId);
-  };
-
-  const stats = {
-    total: mappings?.length || 0,
-    matched: mappings?.filter(m => m.match_status === 'matched' || m.match_status === 'manual').length || 0,
-    pending: mappings?.filter(m => m.match_status === 'pending').length || 0
-  };
+  const getLocationOptions = useCallback((customerId: string | null) => {
+    if (!customerId) return [];
+    const locs = locationsByCustomer.get(customerId) || [];
+    return locs.map(l => ({ value: l.id, label: l.name }));
+  }, [locationsByCustomer]);
 
   const progress = stats.total > 0 ? (stats.matched / stats.total) * 100 : 0;
 
@@ -366,121 +458,136 @@ export default function ImportLocations() {
               Upload a CSV file to begin mapping locations
             </div>
           ) : (
-            <div className="border rounded-lg overflow-auto max-h-[600px]">
-              <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
-                  <TableRow>
-                    <TableHead className="w-[40px]">Type</TableHead>
-                    <TableHead>Airtable Property</TableHead>
-                    <TableHead>Site Name</TableHead>
-                    <TableHead>State</TableHead>
-                    <TableHead>Confidence</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mappings.map((mapping) => (
-                    <TableRow key={mapping.id} className={mapping.match_status === 'pending' ? 'bg-muted/30' : ''}>
-                      <TableCell>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              {mapping.is_manually_mapped ? (
-                                <Hand className="h-4 w-4 text-blue-500" />
-                              ) : (
-                                <Bot className="h-4 w-4 text-muted-foreground" />
+            <>
+              <TooltipProvider>
+                <div className="border rounded-lg overflow-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow>
+                        <TableHead className="w-[40px]">Type</TableHead>
+                        <TableHead>Airtable Property</TableHead>
+                        <TableHead>Site Name</TableHead>
+                        <TableHead>State</TableHead>
+                        <TableHead>Confidence</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead className="w-[80px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedMappings.map((mapping) => (
+                        <TableRow key={mapping.id} className={mapping.match_status === 'pending' ? 'bg-muted/30' : ''}>
+                          <TableCell>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                {mapping.is_manually_mapped ? (
+                                  <Hand className="h-4 w-4 text-blue-500" />
+                                ) : (
+                                  <Bot className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {mapping.is_manually_mapped ? 'Manually mapped' : 'Auto-matched'}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell className="font-medium max-w-[150px] truncate">{mapping.airtable_property}</TableCell>
+                          <TableCell className="max-w-[120px] truncate">{mapping.airtable_site_name}</TableCell>
+                          <TableCell>{mapping.airtable_state}</TableCell>
+                          <TableCell>{getConfidenceBadge(mapping.match_confidence)}</TableCell>
+                          <TableCell>
+                            <SelectWithSearch
+                              value={mapping.customer_id || ""}
+                              onValueChange={(value) => {
+                                updateMappingMutation.mutate({
+                                  id: mapping.id,
+                                  customer_id: value || null,
+                                  location_id: null,
+                                  is_manually_mapped: true
+                                });
+                              }}
+                              options={customerOptions}
+                              placeholder="Select customer..."
+                              searchPlaceholder="Search customers..."
+                              className="w-[180px]"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <SelectWithSearch
+                              value={mapping.location_id || ""}
+                              onValueChange={(value) => {
+                                updateMappingMutation.mutate({
+                                  id: mapping.id,
+                                  customer_id: mapping.customer_id,
+                                  location_id: value || null,
+                                  is_manually_mapped: true
+                                });
+                              }}
+                              options={getLocationOptions(mapping.customer_id)}
+                              placeholder={mapping.customer_id ? "Select location..." : "Select customer first"}
+                              searchPlaceholder="Search locations..."
+                              className="w-[180px]"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {mapping.match_status === 'matched' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Mapped</TooltipContent>
+                                </Tooltip>
                               )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {mapping.is_manually_mapped ? 'Manually mapped' : 'Auto-matched'}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                      <TableCell className="font-medium">{mapping.airtable_property}</TableCell>
-                      <TableCell>{mapping.airtable_site_name}</TableCell>
-                      <TableCell>{mapping.airtable_state}</TableCell>
-                      <TableCell>{getConfidenceBadge(mapping.match_confidence)}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={mapping.customer_id || ""}
-                          onValueChange={(value) => {
-                            updateMappingMutation.mutate({
-                              id: mapping.id,
-                              customer_id: value || null,
-                              location_id: null,
-                              is_manually_mapped: true
-                            });
-                          }}
-                        >
-                          <SelectTrigger className="w-[200px]">
-                            <SelectValue placeholder="Select customer..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {customers?.map(customer => (
-                              <SelectItem key={customer.id} value={customer.id}>
-                                {customer.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={mapping.location_id || ""}
-                          onValueChange={(value) => {
-                            updateMappingMutation.mutate({
-                              id: mapping.id,
-                              customer_id: mapping.customer_id,
-                              location_id: value || null,
-                              is_manually_mapped: true
-                            });
-                          }}
-                          disabled={!mapping.customer_id}
-                        >
-                          <SelectTrigger className="w-[200px]">
-                            <SelectValue placeholder="Select location..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getLocationsForCustomer(mapping.customer_id).map(location => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {mapping.match_status === 'matched' && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Check className="h-4 w-4 text-green-500" />
-                                </TooltipTrigger>
-                                <TooltipContent>Mapped</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          {(mapping.customer_id || mapping.location_id) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => clearMappingMutation.mutate(mapping.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                              {(mapping.customer_id || mapping.location_id) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => clearMappingMutation.mutate(mapping.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TooltipProvider>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((currentPage - 1) * ROWS_PER_PAGE) + 1} - {Math.min(currentPage * ROWS_PER_PAGE, stats.total)} of {stats.total}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
