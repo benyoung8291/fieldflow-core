@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PullToRefreshIndicator } from "@/components/mobile/PullToRefreshIndicator";
 import { usePagination } from "@/hooks/usePagination";
+import { PermissionButton } from "@/components/permissions/PermissionButton";
 
 export default function InvoicesList() {
   const { isMobile } = useViewMode();
@@ -100,12 +101,16 @@ export default function InvoicesList() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Invoices</h1>
             <p className="text-muted-foreground">Manage and track all customer invoices</p>
           </div>
-          <Button asChild>
+          <PermissionButton 
+            module="invoices" 
+            permission="create"
+            asChild
+          >
             <Link to="/invoices/create">
               <Plus className="h-4 w-4 mr-2" />
               Create Invoice
             </Link>
-          </Button>
+          </PermissionButton>
         </div>
 
         <div className="flex items-center gap-4 mb-6">

@@ -38,6 +38,8 @@ import AuditTimeline from "@/components/audit/AuditTimeline";
 import { canApplyGST, getGSTWarning } from "@/lib/gstCompliance";
 import APInvoiceDialog from "@/components/invoices/APInvoiceDialog";
 import { usePresenceSystem } from "@/hooks/usePresenceSystem";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionButton } from "@/components/permissions/PermissionButton";
 
 export default function PurchaseOrderDetails() {
   const { id } = useParams();
@@ -384,52 +386,77 @@ export default function PurchaseOrderDetails() {
 
         <div className="flex items-center gap-2">
           {canEdit && (
-            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+            <PermissionButton 
+              module="purchase_orders" 
+              permission="edit"
+              variant="outline" 
+              onClick={() => setEditDialogOpen(true)}
+            >
               <Edit className="h-4 w-4 mr-2" />
               Edit
-            </Button>
+            </PermissionButton>
           )}
           {canApprove && (
-            <Button onClick={() => handleStatusChange("approved")}>
+            <PermissionButton 
+              module="purchase_orders" 
+              permission="edit"
+              onClick={() => handleStatusChange("approved")}
+            >
               <CheckCircle className="h-4 w-4 mr-2" />
               Approve
-            </Button>
+            </PermissionButton>
           )}
           {canSend && (
-            <Button onClick={() => handleStatusChange("sent")}>
+            <PermissionButton 
+              module="purchase_orders" 
+              permission="edit"
+              onClick={() => handleStatusChange("sent")}
+            >
               <Send className="h-4 w-4 mr-2" />
               Mark as Sent
-            </Button>
+            </PermissionButton>
           )}
           {canReceive && (
-            <Button onClick={() => setReceiptDialogOpen(true)}>
+            <PermissionButton 
+              module="purchase_orders" 
+              permission="edit"
+              onClick={() => setReceiptDialogOpen(true)}
+            >
               <Package className="h-4 w-4 mr-2" />
               Record Receipt
-            </Button>
+            </PermissionButton>
           )}
           {receipts.length > 0 && (
-            <Button onClick={() => setApInvoiceDialogOpen(true)}>
+            <PermissionButton 
+              module="ap_invoices" 
+              permission="create"
+              onClick={() => setApInvoiceDialogOpen(true)}
+            >
               <FileText className="h-4 w-4 mr-2" />
               Create AP Invoice
-            </Button>
+            </PermissionButton>
           )}
-          <Button 
+          <PermissionButton 
+            module="purchase_orders" 
+            permission="edit"
             variant="outline" 
             onClick={() => handleStatusChange("cancelled")}
             className="text-destructive hover:bg-destructive/10"
           >
             <X className="h-4 w-4 mr-2" />
             Cancel PO
-          </Button>
+          </PermissionButton>
           {purchaseOrder.status === "draft" && (
-            <Button 
+            <PermissionButton 
+              module="purchase_orders" 
+              permission="delete"
               variant="outline" 
               onClick={() => setDeleteDialogOpen(true)}
               className="text-destructive hover:bg-destructive/10"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
-            </Button>
+            </PermissionButton>
           )}
         </div>
       </div>

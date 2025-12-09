@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/hooks/usePermissions";
 
 type MailboxFolder = 
   | "inbox" 
@@ -64,6 +65,8 @@ export function TicketList({
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
+  const canCreateTicket = hasPermission('helpdesk', 'create');
 
   // Subscribe to realtime updates for ticket changes
   useEffect(() => {
@@ -455,22 +458,24 @@ export function TicketList({
               className="pl-9 h-9 text-sm bg-muted/50 border-muted-foreground/20 focus:bg-background focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                size="icon" 
-                variant="outline" 
-                className="h-9 w-9 hover-lift transition-all hover:bg-primary hover:text-primary-foreground"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onCreateMarkupRequest}>
-                Create Markup Request
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            {canCreateTicket && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    size="icon" 
+                    variant="outline" 
+                    className="h-9 w-9 hover-lift transition-all hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onCreateMarkupRequest}>
+                    Create Markup Request
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
         </div>
       </div>
 

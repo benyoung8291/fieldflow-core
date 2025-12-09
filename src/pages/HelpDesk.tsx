@@ -36,6 +36,8 @@ import {
 import { useHelpdeskPresence } from "@/hooks/useHelpdeskPresence";
 import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionButton } from "@/components/permissions/PermissionButton";
 
 export default function HelpDesk() {
   const { toast } = useToast();
