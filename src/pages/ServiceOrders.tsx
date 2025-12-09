@@ -815,6 +815,7 @@ export default function ServiceOrders() {
                     metadata={[
                       { label: 'Customer', value: order.customers?.name || '-' },
                       { label: 'Location', value: order.customer_locations?.name || '-' },
+                      { label: 'State', value: order.customer_locations?.state || '-' },
                       ...(order.work_order_number ? [{ label: 'WO#', value: order.work_order_number }] : []),
                       { label: 'Appts', value: `${appointmentCount} (${scheduledHours.toFixed(1)}h/${estimatedHours.toFixed(1)}h)` },
                       { label: 'Total', value: formatCurrency(order.subtotal || 0) },
@@ -838,6 +839,7 @@ export default function ServiceOrders() {
                       <th className="text-left p-3 text-xs font-medium text-muted-foreground">Title</th>
                       <th className="text-left p-3 text-xs font-medium text-muted-foreground">Customer</th>
                       <th className="text-left p-3 text-xs font-medium text-muted-foreground">Location</th>
+                      <th className="text-center p-3 text-xs font-medium text-muted-foreground">State</th>
                       <th className="text-center p-3 text-xs font-medium text-muted-foreground">Appointments</th>
                       <th className="text-center p-3 text-xs font-medium text-muted-foreground">POs</th>
                       <th className="text-center p-3 text-xs font-medium text-muted-foreground">Invoiced</th>
@@ -885,6 +887,11 @@ export default function ServiceOrders() {
                           <div className="text-sm text-muted-foreground truncate max-w-[200px]">
                             {order.customer_locations?.name || '-'}
                           </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <Badge variant="outline" className="text-xs">
+                            {order.customer_locations?.state || '-'}
+                          </Badge>
                         </td>
                         <td className="p-3">
                           <div className="flex justify-center">
