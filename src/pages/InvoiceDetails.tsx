@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePresenceSystem } from "@/hooks/usePresenceSystem";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function InvoiceDetails() {
   const { id } = useParams();
@@ -44,7 +45,10 @@ export default function InvoiceDetails() {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [deleteInvoiceDialogOpen, setDeleteInvoiceDialogOpen] = useState(false);
   const [fetchingPdf, setFetchingPdf] = useState(false);
-
+  const { hasPermission } = usePermissions();
+  const canEditInvoices = hasPermission("invoices", "edit");
+  const canApproveInvoices = hasPermission("invoices", "approve");
+  const canDeleteInvoices = hasPermission("invoices", "delete");
   // Log data access for audit trail
   useLogDetailPageAccess('invoices', id);
 
@@ -716,36 +720,42 @@ export default function InvoiceDetails() {
     const isAPInvoice = invoice.invoice_type === 'ap';
     
     if (invoice.status === "draft") {
-      primaryActions.push({
-        label: draftSaved ? "Saved" : "Save Draft",
-        icon: draftSaved ? <Check className="h-4 w-4" /> : undefined,
-        onClick: () => {
-          setDraftSaved(true);
-          toast.success("Draft saved successfully");
-          setTimeout(() => setDraftSaved(false), 2000);
-        },
-        variant: "outline",
-      });
+      if (canEditInvoices) {
+        primaryActions.push({
+          label: draftSaved ? "Saved" : "Save Draft",
+          icon: draftSaved ? <Check className="h-4 w-4" /> : undefined,
+          onClick: () => {
+            setDraftSaved(true);
+            toast.success("Draft saved successfully");
+            setTimeout(() => setDraftSaved(false), 2000);
+          },
+          variant: "outline",
+        });
+      }
       
       // Go directly to approved for both AP and AR invoices
-      primaryActions.push({
-        label: "Approve",
-        icon: <CheckCircle className="h-4 w-4" />,
-        onClick: () => updateStatusMutation.mutate("approved"),
-        variant: "default",
-      });
+      if (canApproveInvoices) {
+        primaryActions.push({
+          label: "Approve",
+          icon: <CheckCircle className="h-4 w-4" />,
+          onClick: () => updateStatusMutation.mutate("approved"),
+          variant: "default",
+        });
+      }
     } else if (invoice.status === "approved" && !invoice.acumatica_status) {
       // Only allow unapprove if not yet synced to Acumatica
-      primaryActions.push({
-        label: "Unapprove",
-        onClick: () => updateStatusMutation.mutate("draft"),
-        variant: "outline",
-      });
+      if (canApproveInvoices) {
+        primaryActions.push({
+          label: "Unapprove",
+          onClick: () => updateStatusMutation.mutate("draft"),
+          variant: "outline",
+        });
+      }
     }
   }
 
-  // Only show archive button if invoice is draft
-  if (invoice.status === "draft") {
+  // Only show archive button if invoice is draft and user has delete permission
+  if (invoice.status === "draft" && canDeleteInvoices) {
     primaryActions.push({
       label: "Archive",
       icon: <Archive className="h-4 w-4" />,

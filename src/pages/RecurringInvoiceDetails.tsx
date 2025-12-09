@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
+import { PermissionButton } from "@/components/permissions";
 export default function RecurringInvoiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -97,14 +97,16 @@ export default function RecurringInvoiceDetails() {
                   <p className="text-xs text-muted-foreground truncate">Recurring Invoice</p>
                 </div>
               </div>
-              <Button
+              <PermissionButton
+                module="invoices"
+                permission="edit"
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsEditDialogOpen(true)}
                 className="shrink-0"
               >
                 <Pencil className="h-4 w-4" />
-              </Button>
+              </PermissionButton>
             </div>
           </div>
 
@@ -278,10 +280,14 @@ export default function RecurringInvoiceDetails() {
               </p>
             </div>
           </div>
-          <Button onClick={() => setIsEditDialogOpen(true)}>
+          <PermissionButton
+            module="invoices"
+            permission="edit"
+            onClick={() => setIsEditDialogOpen(true)}
+          >
             <Pencil className="mr-2 h-4 w-4" />
             Edit
-          </Button>
+          </PermissionButton>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">

@@ -72,10 +72,11 @@ export default function AppointmentDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAdmin, userRoles } = usePermissions();
+  const { isAdmin, userRoles, hasPermission } = usePermissions();
   const { isMobile } = useViewMode();
   const isSupervisorOrAdmin = isAdmin || userRoles?.some((r) => r.role === "supervisor");
   const [editMode, setEditMode] = useState(false);
+  const canEditAppointments = hasPermission("appointments", "edit");
 
   // Log data access for audit trail
   useLogDetailPageAccess('appointments', id);
@@ -414,7 +415,7 @@ export default function AppointmentDetails() {
 
             {/* Quick Actions Bar */}
             <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
-              {appointment.status === 'draft' && (
+              {appointment.status === 'draft' && canEditAppointments && (
                 <Button
                   size="sm"
                   onClick={() => updateAppointmentMutation.mutate({ status: 'published' })}

@@ -80,6 +80,7 @@ interface SettingsNavItem {
   value: string;
   icon: any;
   adminOnly?: boolean;
+  requiresPermission?: "user_management" | "integrations";
 }
 
 interface SettingsNavGroup {
@@ -107,10 +108,10 @@ const settingsNavigation: SettingsNavGroup[] = [
   {
     group: "Team",
     items: [
-      { title: "Users", value: "users", icon: Users },
-      { title: "Teams", value: "teams", icon: Users },
-      { title: "Roles & Permissions", value: "permissions", icon: Shield },
-      { title: "Pay Rates", value: "pay-rates", icon: DollarSign },
+      { title: "Users", value: "users", icon: Users, requiresPermission: "user_management" },
+      { title: "Teams", value: "teams", icon: Users, requiresPermission: "user_management" },
+      { title: "Roles & Permissions", value: "permissions", icon: Shield, adminOnly: true },
+      { title: "Pay Rates", value: "pay-rates", icon: DollarSign, requiresPermission: "user_management" },
     ]
   },
   {
@@ -134,17 +135,17 @@ const settingsNavigation: SettingsNavGroup[] = [
   {
     group: "Integrations",
     items: [
-      { title: "Connected Apps", value: "integrations", icon: Plug },
-      { title: "Account Sync", value: "account-sync", icon: RefreshCw },
+      { title: "Connected Apps", value: "integrations", icon: Plug, requiresPermission: "integrations" },
+      { title: "Account Sync", value: "account-sync", icon: RefreshCw, requiresPermission: "integrations" },
       { title: "Help Desk", value: "helpdesk", icon: Headphones },
     ]
   },
   {
     group: "Advanced",
     items: [
-      { title: "Access Logs", value: "access-logs", icon: Eye },
-      { title: "Bug Reports", value: "bug-reports", icon: Bug },
-      { title: "Activity Log", value: "activity-log", icon: Activity },
+      { title: "Access Logs", value: "access-logs", icon: Eye, adminOnly: true },
+      { title: "Bug Reports", value: "bug-reports", icon: Bug, adminOnly: true },
+      { title: "Activity Log", value: "activity-log", icon: Activity, adminOnly: true },
       { title: "Change History", value: "changelog", icon: ScrollText },
       { title: "Schema Validator", value: "schema-validator", icon: Database, adminOnly: true },
       { title: "Performance", value: "performance-monitor", icon: Activity, adminOnly: true },
@@ -155,7 +156,9 @@ const settingsNavigation: SettingsNavGroup[] = [
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("user-profile");
   const [searchQuery, setSearchQuery] = useState("");
-  const { isAdmin } = usePermissions();
+  const { isAdmin, hasPermission, isManagement } = usePermissions();
+  const canManageUsers = hasPermission("user_management", "view");
+  const canViewIntegrations = hasPermission("integrations", "view");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<PayRateCategory | null>(null);
   const [formData, setFormData] = useState({
@@ -280,14 +283,19 @@ export default function Settings() {
     }
   };
 
-  // Filter settings based on search
+  // Filter settings based on search and permissions
   const filteredNavigation = settingsNavigation.map(group => ({
     ...group,
-    items: group.items.filter(item => 
-      (!item.adminOnly || isAdmin) &&
-      (item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       group.group.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    items: group.items.filter(item => {
+      // Admin-only check
+      if (item.adminOnly && !isAdmin) return false;
+      // Permission-based check
+      if (item.requiresPermission === "user_management" && !canManageUsers && !isAdmin) return false;
+      if (item.requiresPermission === "integrations" && !canViewIntegrations && !isAdmin) return false;
+      // Search filter
+      return item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.group.toLowerCase().includes(searchQuery.toLowerCase());
+    })
   })).filter(group => group.items.length > 0);
 
   // Get current setting info
