@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AUSTRALIAN_STATES } from "@/lib/constants/australianStates";
-
+import { usePermissions } from "@/hooks/usePermissions";
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function WorkerDetails() {
@@ -33,6 +33,8 @@ export default function WorkerDetails() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const { hasPermission } = usePermissions();
+  const canEditWorkers = hasPermission("workers", "edit");
 
   // Log data access for audit trail
   useLogDetailPageAccess('workers', id);
@@ -204,11 +206,11 @@ export default function WorkerDetails() {
                   Save Changes
                 </Button>
               </>
-            ) : (
+            ) : canEditWorkers ? (
               <Button variant="outline" size="sm" onClick={handleEdit}>
                 Edit Worker
               </Button>
-            )}
+            ) : null}
             <Badge variant={worker.is_active ? "default" : "secondary"}>
               {worker.is_active ? "Active" : "Inactive"}
             </Badge>
