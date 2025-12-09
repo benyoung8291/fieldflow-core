@@ -134,3 +134,6 @@ verify_jwt = true
 
 [functions.get-app-version]
 verify_jwt = false
+
+[functions.update-build-timestamp]
+verify_jwt = true
