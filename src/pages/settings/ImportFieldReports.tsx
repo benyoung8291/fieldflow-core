@@ -39,8 +39,10 @@ interface ImportRow {
 interface ImportResult {
   success: boolean;
   report_number?: string;
+  report_id?: string;
   error?: string;
   row_index: number;
+  pdf_status?: 'uploaded' | 'failed' | 'no_url' | 'pending';
 }
 
 export default function ImportFieldReports() {
@@ -51,6 +53,56 @@ export default function ImportFieldReports() {
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState<ImportResult[]>([]);
   const [isPaused, setIsPaused] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0, phase: '' });
+
+  // Download PDF from Airtable URL and upload to Supabase storage
+  const downloadAndUploadPdf = async (
+    airtableUrl: string,
+    tenantId: string,
+    reportId: string
+  ): Promise<string | null> => {
+    try {
+      // Download from Airtable URL
+      const response = await fetch(airtableUrl);
+      if (!response.ok) {
+        console.warn(`Failed to download PDF: ${response.status}`);
+        return null;
+      }
+
+      const blob = await response.blob();
+      
+      // Verify it's a PDF
+      if (!blob.type.includes('pdf') && !airtableUrl.toLowerCase().includes('.pdf')) {
+        console.warn('Downloaded file is not a PDF');
+        return null;
+      }
+
+      const filename = `legacy/${tenantId}/${reportId}.pdf`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('field-report-photos')
+        .upload(filename, blob, {
+          contentType: 'application/pdf',
+          upsert: true
+        });
+
+      if (error) {
+        console.error('PDF upload error:', error);
+        return null;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('field-report-photos')
+        .getPublicUrl(filename);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('PDF download/upload failed:', error);
+      return null;
+    }
+  };
 
   const { data: locationMappings } = useQuery({
     queryKey: ['location-mappings'],
@@ -238,7 +290,7 @@ export default function ImportFieldReports() {
           }
 
           // Create field report
-          const { error: insertError } = await supabase
+          const { data: insertedReport, error: insertError } = await supabase
             .from('field_reports')
             .insert({
               tenant_id: userProfile.tenant_id,
@@ -267,7 +319,9 @@ export default function ImportFieldReports() {
               status: 'approved',
               approved_at: new Date().toISOString(),
               created_by: profile.user?.id || ''
-            });
+            })
+            .select('id')
+            .single();
 
           if (insertError) {
             results.push({
@@ -279,7 +333,9 @@ export default function ImportFieldReports() {
             results.push({
               success: true,
               report_number: reportNumber,
-              row_index: i
+              report_id: insertedReport?.id,
+              row_index: i,
+              pdf_status: row.pdf_url ? 'pending' : 'no_url'
             });
           }
         } catch (error: any) {
@@ -303,6 +359,58 @@ export default function ImportFieldReports() {
       const failCount = results.filter(r => !r.success).length;
 
       toast.success(`Import complete: ${successCount} succeeded, ${failCount} failed`);
+      
+      // Phase 2: Download and upload PDFs for successful imports
+      const reportsWithPdfs = results.filter(r => r.success && r.report_id && r.pdf_status === 'pending');
+      
+      if (reportsWithPdfs.length > 0) {
+        setPdfProgress({ current: 0, total: reportsWithPdfs.length, phase: 'Downloading PDFs...' });
+        
+        let pdfSuccessCount = 0;
+        let pdfFailCount = 0;
+        
+        for (let i = 0; i < reportsWithPdfs.length; i++) {
+          const result = reportsWithPdfs[i];
+          const row = parsedData[result.row_index];
+          
+          if (row.pdf_url && result.report_id) {
+            const publicUrl = await downloadAndUploadPdf(
+              row.pdf_url,
+              userProfile.tenant_id,
+              result.report_id
+            );
+            
+            if (publicUrl) {
+              // Update the field report with the new PDF URL
+              await supabase
+                .from('field_reports')
+                .update({ pdf_url: publicUrl })
+                .eq('id', result.report_id);
+              
+              result.pdf_status = 'uploaded';
+              pdfSuccessCount++;
+            } else {
+              result.pdf_status = 'failed';
+              pdfFailCount++;
+            }
+          }
+          
+          setPdfProgress({ 
+            current: i + 1, 
+            total: reportsWithPdfs.length, 
+            phase: `Uploading PDFs... (${i + 1}/${reportsWithPdfs.length})` 
+          });
+          setImportResults([...results]);
+          
+          // Small delay between PDF downloads
+          if ((i + 1) % 10 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+        
+        toast.success(`PDF migration: ${pdfSuccessCount} uploaded, ${pdfFailCount} failed`);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['field-reports'] });
     } catch (error) {
       console.error('Import error:', error);
@@ -432,16 +540,43 @@ export default function ImportFieldReports() {
           )}
 
           {isImporting && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Import Progress</span>
-                <span className="text-sm text-muted-foreground">{importProgress}%</span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    {pdfProgress.phase || 'Importing records...'}
+                  </span>
+                  <span className="text-sm text-muted-foreground">{importProgress}%</span>
+                </div>
+                <Progress value={importProgress} className="h-2" />
+                <div className="flex gap-4 text-sm">
+                  <span className="text-green-600">✓ {successCount} succeeded</span>
+                  <span className="text-destructive">✗ {failCount} failed</span>
+                </div>
               </div>
-              <Progress value={importProgress} className="h-2" />
-              <div className="flex gap-4 text-sm">
-                <span className="text-green-500">✓ {successCount} succeeded</span>
-                <span className="text-destructive">✗ {failCount} failed</span>
-              </div>
+              
+              {pdfProgress.total > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">PDF Migration</span>
+                    <span className="text-sm text-muted-foreground">
+                      {pdfProgress.current}/{pdfProgress.total}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(pdfProgress.current / pdfProgress.total) * 100} 
+                    className="h-2" 
+                  />
+                  <div className="flex gap-4 text-sm">
+                    <span className="text-green-600">
+                      ✓ {importResults.filter(r => r.pdf_status === 'uploaded').length} PDFs uploaded
+                    </span>
+                    <span className="text-destructive">
+                      ✗ {importResults.filter(r => r.pdf_status === 'failed').length} PDFs failed
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -464,6 +599,7 @@ export default function ImportFieldReports() {
                     <TableHead>Row</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Report Number</TableHead>
+                    <TableHead>PDF</TableHead>
                     <TableHead>Error</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -475,7 +611,21 @@ export default function ImportFieldReports() {
                         <Badge variant="destructive">Failed</Badge>
                       </TableCell>
                       <TableCell>-</TableCell>
+                      <TableCell>-</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{result.error}</TableCell>
+                    </TableRow>
+                  ))}
+                  {importResults.filter(r => r.success && r.pdf_status === 'failed').slice(0, 100).map((result, idx) => (
+                    <TableRow key={`pdf-${idx}`}>
+                      <TableCell>{result.row_index + 1}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">Imported</Badge>
+                      </TableCell>
+                      <TableCell>{result.report_number}</TableCell>
+                      <TableCell>
+                        <Badge variant="destructive">PDF Failed</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">PDF download/upload failed</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
