@@ -22,6 +22,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { ModuleTutorial } from "@/components/onboarding/ModuleTutorial";
 import { TUTORIAL_CONTENT } from "@/data/tutorialContent";
 import { PermissionButton, PermissionGate } from "@/components/permissions";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 
 export default function Customers() {
   const { isMobile } = useViewMode();
@@ -30,6 +31,9 @@ export default function Customers() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const pagination = usePagination({ initialPageSize: 50 });
+  
+  // Log list page access
+  useLogListPageAccess("customers");
   
   const { onlineUsers, updateCursorPosition } = usePresence({
     page: "customers-list",

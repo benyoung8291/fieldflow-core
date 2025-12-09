@@ -8,6 +8,7 @@ import { saveAs } from "file-saver";
 import { supabase } from "@/integrations/supabase/client";
 import { generateUnifiedPDF, getDefaultTemplate } from "@/lib/pdf";
 import type { DocumentData, LineItem, CompanySettings, UnifiedTemplate, DocumentType } from "@/lib/pdf/types";
+import { useLogDownloadAction } from "@/hooks/useLogDetailPageAccess";
 
 interface UnifiedPDFDownloadProps {
   documentType: DocumentType;
@@ -32,6 +33,7 @@ export const UnifiedPDFDownload: React.FC<UnifiedPDFDownloadProps> = ({
 }) => {
   const [generating, setGenerating] = useState(false);
   const { toast } = useToast();
+  const logDownload = useLogDownloadAction();
 
   const handleDownload = async () => {
     setGenerating(true);
@@ -111,6 +113,12 @@ export const UnifiedPDFDownload: React.FC<UnifiedPDFDownloadProps> = ({
       // Generate filename
       const defaultFilename = `${documentType.replace('_', '-')}-${documentData.document_number || 'document'}.pdf`;
       saveAs(blob, filename || defaultFilename);
+
+      // Log the download action
+      logDownload(documentType, undefined, { 
+        document_number: documentData.document_number,
+        filename: filename || defaultFilename
+      });
 
       toast({
         title: "PDF Generated",
