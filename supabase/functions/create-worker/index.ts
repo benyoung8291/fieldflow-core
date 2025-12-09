@@ -176,7 +176,7 @@ serve(async (req) => {
     }
     console.log("✅ Profile created/updated");
 
-    // Add worker role
+    // Add worker role with verification
     console.log("🏷️ Adding worker role...");
     const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
       user_id: userId,
@@ -186,9 +186,29 @@ serve(async (req) => {
 
     if (roleError) {
       console.error("❌ Role error:", roleError);
+      // SECURITY: Clean up auth user if role creation fails
+      console.log("🧹 Cleaning up auth user due to role creation failure...");
+      await supabaseAdmin.auth.admin.deleteUser(userId);
       throw new Error(`Role assignment error: ${roleError.message}`);
     }
-    console.log("✅ Worker role added");
+
+    // SECURITY: Verify the role was actually created before proceeding
+    console.log("🔍 Verifying worker role creation...");
+    const { data: verifyRole, error: verifyError } = await supabaseAdmin
+      .from("user_roles")
+      .select("id, role")
+      .eq("user_id", userId)
+      .eq("role", "worker")
+      .single();
+
+    if (verifyError || !verifyRole) {
+      console.error("❌ Role verification failed:", verifyError);
+      // SECURITY: Clean up if role verification fails
+      console.log("🧹 Cleaning up auth user due to role verification failure...");
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      throw new Error("Worker role verification failed. Please try again.");
+    }
+    console.log("✅ Worker role verified:", verifyRole);
 
     // Send welcome email via Microsoft Graph
     try {
