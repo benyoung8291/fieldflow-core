@@ -16,6 +16,7 @@ import { usePresence } from "@/hooks/usePresence";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import CreateWorkerDialog from "@/components/workers/CreateWorkerDialog";
 import { PermissionButton, PermissionGate } from "@/components/permissions";
+import { OrphanedWorkerAlert } from "@/components/workers/OrphanedWorkerAlert";
 
 interface Worker {
   id: string;
@@ -120,6 +121,8 @@ export default function Workers() {
             </Button>
           </div>
         </div>
+
+        <OrphanedWorkerAlert />
 
         {workers.length === 0 && !isLoading && (
           <Alert>
