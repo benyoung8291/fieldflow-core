@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +49,9 @@ export default function Quotes() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Log list page access for audit trail
+  useLogListPageAccess('quotes');
   const [quoteToDelete, setQuoteToDelete] = useState<any>(null);
   const pagination = usePagination({ initialPageSize: 50 });
 

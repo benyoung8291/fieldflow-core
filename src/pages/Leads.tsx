@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -32,6 +33,9 @@ export default function Leads() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const pagination = usePagination({ initialPageSize: 50 });
+
+  // Log list page access for audit trail
+  useLogListPageAccess('leads');
 
   const { data: leadsResponse, isLoading, refetch } = useQuery({
     queryKey: ["leads", searchTerm, statusFilter, pagination.currentPage, pagination.pageSize],

@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -32,6 +33,9 @@ export default function WorkerDetails() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>({});
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('workers', id);
 
   const { data: worker, isLoading } = useQuery({
     queryKey: ["worker", id],

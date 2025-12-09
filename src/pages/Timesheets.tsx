@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,9 @@ import { UnprocessedTimeLogsTable } from "@/components/timesheets/UnprocessedTim
 export default function Timesheets() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("by-worker");
+
+  // Log list page access for audit trail
+  useLogListPageAccess('timesheets');
   
   // Pay week is Thu-Wed, so week starts on Thursday
   const getPayWeekStart = (date: Date) => {

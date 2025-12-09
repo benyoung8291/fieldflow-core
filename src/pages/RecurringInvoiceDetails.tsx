@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -23,6 +24,9 @@ export default function RecurringInvoiceDetails() {
   const navigate = useNavigate();
   const { isMobile } = useViewMode();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('recurring_invoices', id);
 
   const { data: recurringInvoice } = useQuery({
     queryKey: ["recurring-invoice", id],

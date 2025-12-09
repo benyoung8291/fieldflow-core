@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,9 @@ export default function APInvoicesList() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const pagination = usePagination({ initialPageSize: 50 });
+
+  // Log list page access for audit trail
+  useLogListPageAccess('ap_invoices');
 
   const { data: apInvoicesResponse, isLoading, refetch } = useAPInvoices(statusFilter, pagination.currentPage, pagination.pageSize);
   

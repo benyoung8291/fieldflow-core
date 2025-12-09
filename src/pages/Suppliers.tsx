@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +48,9 @@ export default function Suppliers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const pagination = usePagination({ initialPageSize: 50 });
+
+  // Log list page access for audit trail
+  useLogListPageAccess('suppliers');
 
   const { data: vendorsResponse, isLoading } = useQuery({
     queryKey: ["vendors", searchQuery, statusFilter, gstFilter, sortField, sortOrder, pagination.currentPage, pagination.pageSize],

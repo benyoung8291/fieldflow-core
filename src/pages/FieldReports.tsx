@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLogListPageAccess } from '@/hooks/useLogDetailPageAccess';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -18,6 +19,9 @@ export default function FieldReports() {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  // Log list page access for audit trail
+  useLogListPageAccess('field_reports');
 
   const { data: reports, isLoading } = useQuery({
     queryKey: ['field-reports'],

@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -26,6 +27,9 @@ export default function CustomerLocationDetails() {
   const [isGeocoding, setIsGeocoding] = React.useState(false);
   const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
   const [contactRole, setContactRole] = React.useState<"site_contact" | "facility_manager">("site_contact");
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('customer_locations', id);
 
   const { data: location, isLoading: locationLoading } = useQuery({
     queryKey: ["customer-location", id],

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogListPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -47,6 +48,9 @@ export default function Appointments() {
   const [sortField, setSortField] = useState<SortField>("start_time");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const pagination = usePagination({ initialPageSize: 50 });
+
+  // Log list page access for audit trail
+  useLogListPageAccess('appointments');
 
   const { data: appointmentsResponse, isLoading, refetch } = useQuery({
     queryKey: ["all-appointments", searchQuery, statusFilter, pagination.currentPage, pagination.pageSize],

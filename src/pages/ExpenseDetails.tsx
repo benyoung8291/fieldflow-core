@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,9 @@ export default function ExpenseDetails() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionInput, setShowRejectionInput] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('expenses', id);
 
   const { data: expense, isLoading } = useQuery({
     queryKey: ["expense", id],

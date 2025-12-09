@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { 
@@ -35,6 +36,9 @@ export default function APInvoiceDetails() {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fetchingPdf, setFetchingPdf] = useState(false);
+
+  // Log data access for audit trail
+  useLogDetailPageAccess('ap_invoices', id);
 
   const { data: invoice, isLoading } = useAPInvoice(id);
   const { data: lineItems } = useAPInvoiceLineItems(id);
