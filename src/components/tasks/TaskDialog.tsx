@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,15 @@ export default function TaskDialog({
   workers = [],
   taskId,
 }: TaskDialogProps) {
+  // Fetch current user for default assignment
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user-for-task"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
+
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [previewChecklistItems, setPreviewChecklistItems] = useState<Array<{ title: string; item_order: number }>>([]);
   const [formData, setFormData] = useState<TaskFormData>({
@@ -91,6 +100,16 @@ export default function TaskDialog({
     },
     enabled: !taskId, // Only fetch when creating new task
   });
+
+  // Default to current user when creating new task
+  useEffect(() => {
+    if (currentUser && !defaultValues?.assigned_to && !taskId && open) {
+      setFormData(prev => ({
+        ...prev,
+        assigned_to: prev.assigned_to || currentUser.id
+      }));
+    }
+  }, [currentUser, defaultValues, taskId, open]);
 
   // Reset form when defaultValues change (editing different task)
   useEffect(() => {
@@ -360,16 +379,15 @@ export default function TaskDialog({
             </div>
 
             <div>
-              <Label htmlFor="assigned_to">Assign To</Label>
+              <Label htmlFor="assigned_to">Assign To *</Label>
               <Select
-                value={formData.assigned_to || "unassigned"}
-                onValueChange={(value) => setFormData({ ...formData, assigned_to: value === "unassigned" ? undefined : value })}
+                value={formData.assigned_to || ""}
+                onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select assignee" />
+                <SelectTrigger className={cn(!formData.assigned_to && "border-destructive")}>
+                  <SelectValue placeholder="Select assignee (required)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {workers.filter(w => w.id && w.id.trim()).map((worker) => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.first_name} {worker.last_name}
@@ -437,7 +455,7 @@ export default function TaskDialog({
                   <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSubmit} disabled={!formData.title.trim()}>
+                  <Button onClick={handleSubmit} disabled={!formData.title.trim() || !formData.assigned_to}>
                     {defaultValues ? "Update" : "Create"} Task
                   </Button>
                 </div>
@@ -549,16 +567,15 @@ export default function TaskDialog({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="assigned_to">Assign To</Label>
+                <Label htmlFor="assigned_to">Assign To *</Label>
                 <Select
-                  value={formData.assigned_to || "unassigned"}
-                  onValueChange={(value) => setFormData({ ...formData, assigned_to: value === "unassigned" ? undefined : value })}
+                  value={formData.assigned_to || ""}
+                  onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select assignee" />
+                  <SelectTrigger className={cn(!formData.assigned_to && "border-destructive")}>
+                    <SelectValue placeholder="Select assignee (required)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {workers.filter(w => w.id && w.id.trim()).map((worker) => (
                       <SelectItem key={worker.id} value={worker.id}>
                         {worker.first_name} {worker.last_name}
@@ -622,7 +639,7 @@ export default function TaskDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={!formData.title.trim()}>
+              <Button onClick={handleSubmit} disabled={!formData.title.trim() || !formData.assigned_to}>
                 {defaultValues ? "Update" : "Create"} Task
               </Button>
             </div>

@@ -721,7 +721,7 @@ export default function Tasks() {
         description: taskData.description,
         status: taskData.status,
         priority: taskData.priority,
-        assigned_to: taskData.assigned_to || null,
+        assigned_to: taskData.assigned_to || user.id, // Default to current user if not assigned
         due_date: taskData.due_date?.toISOString() || null,
         start_date: taskData.start_date?.toISOString().split('T')[0] || null,
         end_date: taskData.end_date?.toISOString().split('T')[0] || null,
@@ -848,12 +848,37 @@ export default function Tasks() {
   });
   const toggleTaskStatus = async (task: any) => {
     const newStatus = task.status === "completed" ? "pending" : "completed";
-    updateTaskMutation.mutate({
-      id: task.id,
-      data: {
-        status: newStatus
-      } as any
+    const queryKey = ["tasks", filterStatus, filterPriority, filterAssignee, searchQuery, pagination.currentPage, pagination.pageSize];
+    
+    // Optimistic update - update cache immediately for instant feedback
+    queryClient.setQueryData(queryKey, (old: any) => {
+      if (!old?.tasks) return old;
+      return {
+        ...old,
+        tasks: old.tasks.map((t: any) => 
+          t.id === task.id 
+            ? { 
+                ...t, 
+                status: newStatus, 
+                completed_at: newStatus === "completed" ? new Date().toISOString() : null 
+              }
+            : t
+        )
+      };
     });
+
+    // Then update database in background
+    const { error } = await supabase.from("tasks" as any).update({
+      status: newStatus,
+      completed_at: newStatus === "completed" ? new Date().toISOString() : null
+    }).eq("id", task.id);
+
+    if (error) {
+      // Revert on error
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.error("Failed to update task");
+    }
+    // Silent success - no toast for natural checkbox feel
   };
 
   // Drag handlers for kanban view
