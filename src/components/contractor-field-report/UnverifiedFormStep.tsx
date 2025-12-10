@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { Loader2, AlertCircle, Info, Building2, Camera, Trash2, Clock, PenLine, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useContractorFieldReportDraft } from "@/hooks/useContractorFieldReportDraft";
 import { ContractorPhotoUpload } from "./ContractorPhotoUpload";
+import { ConditionRatingSlider } from "./ConditionRatingSlider";
 import SignaturePad from "@/components/worker/SignaturePad";
 import {
   AlertDialog,
@@ -306,33 +306,17 @@ export function UnverifiedFormStep({ token, phone, onSuccess }: UnverifiedFormSt
           <CardDescription>Rate the condition of flooring (1 = Poor, 5 = Excellent)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <Label>Carpet Condition</Label>
-              <span className="text-sm font-medium">{formData.carpetRating}/5</span>
-            </div>
-            <Slider
-              value={[formData.carpetRating]}
-              onValueChange={([v]) => updateFormField('carpetRating', v)}
-              min={1}
-              max={5}
-              step={1}
-            />
-          </div>
+          <ConditionRatingSlider
+            label="Carpet Condition"
+            value={formData.carpetRating}
+            onChange={(v) => updateFormField('carpetRating', v)}
+          />
 
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <Label>Hard Floor Condition</Label>
-              <span className="text-sm font-medium">{formData.hardfloorRating}/5</span>
-            </div>
-            <Slider
-              value={[formData.hardfloorRating]}
-              onValueChange={([v]) => updateFormField('hardfloorRating', v)}
-              min={1}
-              max={5}
-              step={1}
-            />
-          </div>
+          <ConditionRatingSlider
+            label="Hard Floor Condition"
+            value={formData.hardfloorRating}
+            onChange={(v) => updateFormField('hardfloorRating', v)}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="flooringState">Flooring State Notes</Label>
