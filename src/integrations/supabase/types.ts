@@ -1768,6 +1768,147 @@ export type Database = {
           },
         ]
       }
+      contractor_customer_visibility: {
+        Row: {
+          contact_id: string | null
+          created_at: string | null
+          customer_id: string
+          hidden_by: string | null
+          id: string
+          is_hidden: boolean | null
+          tenant_id: string
+          worker_id: string | null
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string | null
+          customer_id: string
+          hidden_by?: string | null
+          id?: string
+          is_hidden?: boolean | null
+          tenant_id: string
+          worker_id?: string | null
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string | null
+          customer_id?: string
+          hidden_by?: string | null
+          id?: string
+          is_hidden?: boolean | null
+          tenant_id?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_customer_visibility_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_customer_visibility_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_customer_visibility_hidden_by_fkey"
+            columns: ["hidden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_customer_visibility_hidden_by_fkey"
+            columns: ["hidden_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_customer_visibility_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_customer_visibility_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_customer_visibility_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contractor_field_report_links: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          tenant_id: string
+          token: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          tenant_id: string
+          token: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          tenant_id?: string
+          token?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_field_report_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_field_report_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_field_report_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_card_transactions: {
         Row: {
           amount: number
@@ -2789,6 +2930,8 @@ export type Database = {
           arrival_time: string
           carpet_condition_arrival: number | null
           carpet_condition_rating: number | null
+          contractor_name: string | null
+          contractor_phone: string | null
           created_at: string
           created_by: string
           customer_id: string | null
@@ -2812,7 +2955,11 @@ export type Database = {
           is_legacy_import: boolean | null
           legacy_pdf_url: string | null
           location_id: string | null
+          manual_location_entry: string | null
+          mapped_at: string | null
+          mapped_by: string | null
           methods_attempted: string | null
+          needs_customer_mapping: boolean | null
           pdf_generated_at: string | null
           pdf_url: string | null
           problem_areas_description: string | null
@@ -2822,11 +2969,13 @@ export type Database = {
           service_order_number_reference: string | null
           status: string
           subcontractor_contact_id: string | null
+          submission_type: string | null
           submitted_at: string | null
           swms_completed: boolean | null
           tenant_id: string
           test_tag_completed: boolean | null
           updated_at: string
+          verified_contact_id: string | null
           work_description: string
           work_order_number: string | null
           worker_name: string
@@ -2839,6 +2988,8 @@ export type Database = {
           arrival_time: string
           carpet_condition_arrival?: number | null
           carpet_condition_rating?: number | null
+          contractor_name?: string | null
+          contractor_phone?: string | null
           created_at?: string
           created_by: string
           customer_id?: string | null
@@ -2862,7 +3013,11 @@ export type Database = {
           is_legacy_import?: boolean | null
           legacy_pdf_url?: string | null
           location_id?: string | null
+          manual_location_entry?: string | null
+          mapped_at?: string | null
+          mapped_by?: string | null
           methods_attempted?: string | null
+          needs_customer_mapping?: boolean | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
           problem_areas_description?: string | null
@@ -2872,11 +3027,13 @@ export type Database = {
           service_order_number_reference?: string | null
           status?: string
           subcontractor_contact_id?: string | null
+          submission_type?: string | null
           submitted_at?: string | null
           swms_completed?: boolean | null
           tenant_id: string
           test_tag_completed?: boolean | null
           updated_at?: string
+          verified_contact_id?: string | null
           work_description: string
           work_order_number?: string | null
           worker_name: string
@@ -2889,6 +3046,8 @@ export type Database = {
           arrival_time?: string
           carpet_condition_arrival?: number | null
           carpet_condition_rating?: number | null
+          contractor_name?: string | null
+          contractor_phone?: string | null
           created_at?: string
           created_by?: string
           customer_id?: string | null
@@ -2912,7 +3071,11 @@ export type Database = {
           is_legacy_import?: boolean | null
           legacy_pdf_url?: string | null
           location_id?: string | null
+          manual_location_entry?: string | null
+          mapped_at?: string | null
+          mapped_by?: string | null
           methods_attempted?: string | null
+          needs_customer_mapping?: boolean | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
           problem_areas_description?: string | null
@@ -2922,11 +3085,13 @@ export type Database = {
           service_order_number_reference?: string | null
           status?: string
           subcontractor_contact_id?: string | null
+          submission_type?: string | null
           submitted_at?: string | null
           swms_completed?: boolean | null
           tenant_id?: string
           test_tag_completed?: boolean | null
           updated_at?: string
+          verified_contact_id?: string | null
           work_description?: string
           work_order_number?: string | null
           worker_name?: string
@@ -2954,6 +3119,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "field_reports_mapped_by_fkey"
+            columns: ["mapped_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_mapped_by_fkey"
+            columns: ["mapped_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "field_reports_service_order_id_fkey"
             columns: ["service_order_id"]
             isOneToOne: false
@@ -2972,6 +3151,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_verified_contact_id_fkey"
+            columns: ["verified_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
