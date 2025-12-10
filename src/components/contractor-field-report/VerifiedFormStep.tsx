@@ -34,6 +34,7 @@ interface VerifiedFormStepProps {
   contactName?: string;
   suggestedCustomers?: { name: string; locations: string[] }[];
   onSuccess: (reportNumber: string) => void;
+  onChangePhone: () => void;
 }
 
 interface CustomerData {
@@ -53,6 +54,7 @@ export function VerifiedFormStep({
   contactType,
   contactName,
   onSuccess,
+  onChangePhone,
 }: VerifiedFormStepProps) {
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
@@ -218,14 +220,23 @@ export function VerifiedFormStep({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Header with draft status and clear button */}
-      <div className="flex items-center justify-between">
+      {/* Header with verification status and change phone option */}
+      <div className="flex items-center justify-between gap-2">
         <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20 flex-1">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800 dark:text-green-200">
             Phone verified{contactName ? ` - Welcome, ${contactName}` : ""}
           </AlertDescription>
         </Alert>
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="sm" 
+          onClick={onChangePhone}
+          className="shrink-0"
+        >
+          Change Number
+        </Button>
       </div>
 
       {/* Draft status bar */}
