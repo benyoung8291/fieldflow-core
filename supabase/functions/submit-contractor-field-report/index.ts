@@ -198,7 +198,7 @@ serve(async (req) => {
         manual_location_entry: manualLocationEntry || null,
         needs_customer_mapping: needsCustomerMapping,
         verified_contact_id: verifiedContactId,
-        report_date: reportData?.reportDate || new Date().toISOString().split('T')[0],
+        service_date: reportData?.reportDate || new Date().toISOString().split('T')[0],
         arrival_time: reportData?.arrivalTime || null,
         work_description: reportData?.workDescription || null,
         internal_notes: reportData?.internalNotes || null,
