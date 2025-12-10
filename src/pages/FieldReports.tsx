@@ -7,20 +7,31 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Search, Download, Edit, Plus } from 'lucide-react';
+import { FileText, Search, Download, Edit, Plus, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import FieldReportDialog from '@/components/field-reports/FieldReportDialog';
+import { ContractorMappingDialog } from '@/components/field-reports/ContractorMappingDialog';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionButton } from '@/components/permissions/PermissionButton';
 
 export default function FieldReports() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
+  const [reportToMap, setReportToMap] = useState<any>(null);
 
   // Log list page access for audit trail
   useLogListPageAccess('field_reports');
@@ -152,20 +163,42 @@ export default function FieldReports() {
 
   const filteredReports = reports?.filter(report => {
     const searchLower = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       report.report_number.toLowerCase().includes(searchLower) ||
-      report.worker_name.toLowerCase().includes(searchLower) ||
-      report.customer?.name.toLowerCase().includes(searchLower)
+      report.worker_name?.toLowerCase().includes(searchLower) ||
+      report.customer?.name?.toLowerCase().includes(searchLower) ||
+      report.manual_location_entry?.toLowerCase().includes(searchLower)
     );
+    
+    // Status filter
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'pending_mapping') {
+        return matchesSearch && report.needs_customer_mapping === true;
+      }
+      return matchesSearch && report.status === statusFilter;
+    }
+    
+    return matchesSearch;
   });
 
-  const getStatusColor = (status: string) => {
+  const pendingMappingCount = reports?.filter(r => r.needs_customer_mapping)?.length || 0;
+
+  const getStatusColor = (status: string, needsMapping?: boolean) => {
+    if (needsMapping) return 'destructive';
     switch (status) {
       case 'draft': return 'secondary';
       case 'submitted': return 'default';
+      case 'contractor_submitted': return 'default';
       case 'approved': return 'default';
+      case 'pending_mapping': return 'destructive';
       default: return 'secondary';
     }
+  };
+
+  const getStatusLabel = (status: string, needsMapping?: boolean) => {
+    if (needsMapping) return 'Needs Mapping';
+    if (status === 'contractor_submitted') return 'Contractor';
+    return status;
   };
 
   const beforePhotos = selectedReport?.photos?.filter((p: any) => p.photo_type === 'before') || [];
@@ -192,7 +225,14 @@ export default function FieldReports() {
           <div className="p-4 border-b space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Field Reports</h2>
-              <Badge variant="secondary">{reports?.length || 0}</Badge>
+              <div className="flex items-center gap-2">
+                {pendingMappingCount > 0 && (
+                  <Badge variant="destructive" className="animate-pulse">
+                    {pendingMappingCount} needs mapping
+                  </Badge>
+                )}
+                <Badge variant="secondary">{filteredReports?.length || 0}</Badge>
+              </div>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -203,6 +243,24 @@ export default function FieldReports() {
                 className="pl-9"
               />
             </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending_mapping">
+                  <span className="flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3 text-destructive" />
+                    Needs Mapping
+                  </span>
+                </SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
+                <SelectItem value="contractor_submitted">Contractor</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -233,16 +291,35 @@ export default function FieldReports() {
                           <FileText className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium text-sm">{report.report_number}</span>
                         </div>
-                        <Badge variant={getStatusColor(report.status)}>
-                          {report.status}
+                        <Badge variant={getStatusColor(report.status, report.needs_customer_mapping)}>
+                          {getStatusLabel(report.status, report.needs_customer_mapping)}
                         </Badge>
                       </div>
                       <div className="text-sm space-y-1">
-                        <p className="font-medium">{report.customer?.name}</p>
-                        <p className="text-muted-foreground">{report.worker_name}</p>
+                        {report.customer?.name ? (
+                          <p className="font-medium">{report.customer.name}</p>
+                        ) : report.manual_location_entry ? (
+                          <p className="font-medium text-muted-foreground italic">"{report.manual_location_entry}"</p>
+                        ) : null}
+                        <p className="text-muted-foreground">{report.worker_name || report.contractor_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(report.service_date), 'MMM dd, yyyy')}
                         </p>
+                        {report.needs_customer_mapping && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="mt-2 w-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReportToMap(report);
+                              setMappingDialogOpen(true);
+                            }}
+                          >
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Map to Customer
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -527,6 +604,12 @@ export default function FieldReports() {
       <FieldReportDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+      />
+
+      <ContractorMappingDialog
+        open={mappingDialogOpen}
+        onOpenChange={setMappingDialogOpen}
+        report={reportToMap}
       />
     </DashboardLayout>
   );

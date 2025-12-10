@@ -64,8 +64,9 @@ import { TeamsTab } from "@/components/settings/TeamsTab";
 import { AccessLogsTab } from "@/components/settings/AccessLogsTab";
 import { AccessDenialLogsTab } from "@/components/settings/AccessDenialLogsTab";
 import { TeamOnboardingSteps } from "@/components/settings/TeamOnboardingSteps";
+import ContractorLinksTab from "@/components/settings/ContractorLinksTab";
 import { cn } from "@/lib/utils";
-import { Receipt, Shield as ShieldCheck, FileCheck } from "lucide-react";
+import { Receipt, Shield as ShieldCheck, FileCheck, Link as LinkIcon } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 
 interface PayRateCategory {
@@ -131,6 +132,7 @@ const settingsNavigation: SettingsNavGroup[] = [
       { title: "CRM Pipeline", value: "crm-statuses", icon: PieChart },
       { title: "Templates", value: "templates", icon: FileText },
       { title: "Numbering", value: "numbering", icon: Hash },
+      { title: "Contractor Links", value: "contractor-links", icon: LinkIcon },
     ]
   },
   {
@@ -607,6 +609,14 @@ export default function Settings() {
               <Card className="border-none shadow-sm">
                 <CardContent className="pt-6">
                   <HelpDeskSettingsTab />
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "contractor-links" && (
+              <Card className="border-none shadow-sm">
+                <CardContent className="pt-6">
+                  <ContractorLinksTab />
                 </CardContent>
               </Card>
             )}
