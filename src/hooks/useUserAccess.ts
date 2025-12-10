@@ -40,7 +40,9 @@ export function useUserAccess() {
     },
     retry: 2, // Retry twice on transient failures
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
-    staleTime: 0, // Always fetch fresh for security-critical access checks
-    gcTime: 60 * 1000, // 1 minute - reduced for security-critical data
+    staleTime: 5 * 60 * 1000, // 5 minutes - access permissions rarely change mid-session
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    // Keep previous data while refetching to prevent UI flicker and data loss on window switch
+    placeholderData: (previousData) => previousData,
   });
 }
