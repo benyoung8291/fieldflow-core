@@ -62,6 +62,7 @@ import APInvoiceSettingsTab from "@/components/settings/APInvoiceSettingsTab";
 import { BugReportsList } from "@/components/settings/BugReportsList";
 import { TeamsTab } from "@/components/settings/TeamsTab";
 import { AccessLogsTab } from "@/components/settings/AccessLogsTab";
+import { AccessDenialLogsTab } from "@/components/settings/AccessDenialLogsTab";
 import { TeamOnboardingSteps } from "@/components/settings/TeamOnboardingSteps";
 import { cn } from "@/lib/utils";
 import { Receipt, Shield as ShieldCheck, FileCheck } from "lucide-react";
@@ -144,6 +145,7 @@ const settingsNavigation: SettingsNavGroup[] = [
     group: "Advanced",
     items: [
       { title: "Access Logs", value: "access-logs", icon: Eye, adminOnly: true },
+      { title: "Access Denials", value: "access-denials", icon: Shield, adminOnly: true },
       { title: "Bug Reports", value: "bug-reports", icon: Bug, adminOnly: true },
       { title: "Activity Log", value: "activity-log", icon: Activity, adminOnly: true },
       { title: "Change History", value: "changelog", icon: ScrollText },
@@ -651,6 +653,10 @@ export default function Settings() {
 
             {activeTab === "access-logs" && (
               <AccessLogsTab />
+            )}
+
+            {activeTab === "access-denials" && (
+              <AccessDenialLogsTab />
             )}
 
             {activeTab === "bug-reports" && (

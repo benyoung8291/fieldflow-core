@@ -4,8 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 interface AccessLogEntry {
   table_name: string;
   record_id?: string;
-  action: 'view' | 'list' | 'search' | 'export' | 'download';
+  action: 'view' | 'list' | 'search' | 'export' | 'download' | 'access_denied';
   metadata?: Record<string, any>;
+}
+
+interface AccessDeniedEntry {
+  attempted_route: string;
+  reason: string;
+  redirect_to: string;
+  user_access_info?: Record<string, any>;
 }
 
 interface UserContext {
@@ -16,6 +23,7 @@ interface UserContext {
 
 interface DataAccessLoggerContextValue {
   logAccess: (entry: AccessLogEntry) => void;
+  logAccessDenied: (entry: AccessDeniedEntry) => void;
   flushLogs: () => Promise<void>;
 }
 
@@ -124,6 +132,36 @@ export function DataAccessLoggerProvider({ children }: { children: React.ReactNo
     }
   }, [userContext, flushLogs]);
 
+  // Immediate logging for security events (access denied) - no batching
+  const logAccessDenied = useCallback(async (entry: AccessDeniedEntry) => {
+    // Log even without user context (for anonymous users attempting access)
+    const userId = userContext?.userId || null;
+    const userName = userContext?.userName || 'Anonymous';
+    const tenantId = userContext?.tenantId || null;
+
+    try {
+      await supabase.from('data_access_logs').insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        user_name: userName,
+        table_name: 'access_control',
+        record_id: null,
+        action: 'access_denied',
+        metadata: {
+          attempted_route: entry.attempted_route,
+          reason: entry.reason,
+          redirect_to: entry.redirect_to,
+          user_access_info: entry.user_access_info || {},
+        },
+        user_agent: navigator.userAgent,
+        accessed_at: new Date().toISOString(),
+      });
+      console.warn('[Security] Access denied logged:', entry.reason, entry.attempted_route);
+    } catch (err) {
+      console.error('[DataAccessLogger] Failed to log access denial:', err);
+    }
+  }, [userContext]);
+
   // Periodic flush
   useEffect(() => {
     intervalRef.current = setInterval(() => {
@@ -180,7 +218,7 @@ export function DataAccessLoggerProvider({ children }: { children: React.ReactNo
   }, [userContext, flushLogs]);
 
   return (
-    <DataAccessLoggerContext.Provider value={{ logAccess, flushLogs }}>
+    <DataAccessLoggerContext.Provider value={{ logAccess, logAccessDenied, flushLogs }}>
       {children}
     </DataAccessLoggerContext.Provider>
   );
@@ -192,6 +230,7 @@ export function useDataAccessLogger() {
     // Return no-op functions when outside provider
     return {
       logAccess: () => {},
+      logAccessDenied: async () => {},
       flushLogs: async () => {},
     };
   }

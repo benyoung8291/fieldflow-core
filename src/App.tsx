@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ViewModeProvider } from "@/contexts/ViewModeContext";
 import { BrandColorsProvider } from "@/components/BrandColorsProvider";
-import { DataAccessLoggerProvider } from "@/contexts/DataAccessLoggerContext";
+import { DataAccessLoggerProvider, useDataAccessLogger } from "@/contexts/DataAccessLoggerContext";
 import Auth from "./pages/Auth";
 import FirstPasswordReset from "./pages/FirstPasswordReset";
 import { useUserAccess } from "./hooks/useUserAccess";
@@ -149,6 +149,7 @@ const queryClient = new QueryClient({
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { data: access, isLoading, error } = useUserAccess();
   const location = window.location.pathname;
+  const { logAccessDenied } = useDataAccessLogger();
   
   // Only show loading when we have NO cached data (initial load)
   // During background refetches (isLoading but has cached data), show children
@@ -173,6 +174,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // This blocks even if they somehow have other access flags set
   if (access.isCustomer) {
     if (!isCustomerPortalRoute) {
+      logAccessDenied({
+        attempted_route: location,
+        reason: 'customer_only_user_accessing_non_portal_route',
+        redirect_to: '/customer',
+        user_access_info: { isCustomer: true, canAccessCustomerPortal: access.canAccessCustomerPortal },
+      });
       return <Navigate to="/customer" replace />;
     }
     return <>{children}</>;
@@ -181,6 +188,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Customer portal routes - require customer access
   if (isCustomerPortalRoute) {
     if (!access.canAccessCustomerPortal) {
+      const redirectTo = access.canAccessOffice ? '/dashboard' : access.canAccessWorker ? '/worker/dashboard' : '/auth';
+      logAccessDenied({
+        attempted_route: location,
+        reason: 'unauthorized_customer_portal_access',
+        redirect_to: redirectTo,
+        user_access_info: { canAccessOffice: access.canAccessOffice, canAccessWorker: access.canAccessWorker },
+      });
       // User is authenticated but doesn't have customer portal access
       if (access.canAccessOffice) {
         return <Navigate to="/dashboard" replace />;
@@ -196,6 +210,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Worker-only routes - require worker access
   if (location.startsWith("/worker")) {
     if (!access.canAccessWorker) {
+      const redirectTo = access.canAccessOffice ? '/dashboard' : access.canAccessCustomerPortal ? '/customer' : '/auth';
+      logAccessDenied({
+        attempted_route: location,
+        reason: 'unauthorized_worker_app_access',
+        redirect_to: redirectTo,
+        user_access_info: { canAccessOffice: access.canAccessOffice, canAccessCustomerPortal: access.canAccessCustomerPortal },
+      });
       // User is authenticated but doesn't have worker access
       // Redirect to office dashboard if they have office access, otherwise to auth
       if (access.canAccessOffice) {
@@ -210,6 +231,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Office routes - require office role
   else {
     if (!access.canAccessOffice) {
+      const redirectTo = access.canAccessWorker ? '/worker/dashboard' : access.canAccessCustomerPortal ? '/customer' : '/auth';
+      logAccessDenied({
+        attempted_route: location,
+        reason: 'no_office_access',
+        redirect_to: redirectTo,
+        user_access_info: { isWorker: access.isWorker, canAccessWorker: access.canAccessWorker, canAccessCustomerPortal: access.canAccessCustomerPortal },
+      });
       // User is authenticated but doesn't have office access
       if (access.canAccessWorker) {
         return <Navigate to="/worker/dashboard" replace />;
