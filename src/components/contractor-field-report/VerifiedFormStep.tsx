@@ -6,11 +6,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, CheckCircle2, AlertCircle, MapPin, Building2 } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, MapPin, Building2, Camera, Trash2, Clock, PenLine, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import { useContractorFieldReportDraft, PhotoPair } from "@/hooks/useContractorFieldReportDraft";
+import { ContractorPhotoUpload } from "./ContractorPhotoUpload";
+import SignaturePad from "@/components/worker/SignaturePad";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface VerifiedFormStepProps {
   token: string;
@@ -44,40 +58,33 @@ export function VerifiedFormStep({
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
   
   const [customers, setCustomers] = useState<CustomerData>({ suggested: [], all: [] });
   const [locations, setLocations] = useState<LocationData>({ suggested: [], all: [] });
   
-  const [selectedCustomer, setSelectedCustomer] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("");
-  const [contractorName, setContractorName] = useState(contactName || "");
-  
-  // Form fields
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split("T")[0]);
-  const [workDescription, setWorkDescription] = useState("");
-  const [carpetRating, setCarpetRating] = useState([3]);
-  const [hardfloorRating, setHardfloorRating] = useState([3]);
-  const [flooringState, setFlooringState] = useState("");
-  const [swmsCompleted, setSwmsCompleted] = useState(false);
-  const [testTagCompleted, setTestTagCompleted] = useState(false);
-  const [equipmentGoodOrder, setEquipmentGoodOrder] = useState(true);
-  const [problemAreas, setProblemAreas] = useState(false);
-  const [problemAreasDescription, setProblemAreasDescription] = useState("");
-  const [incident, setIncident] = useState(false);
-  const [incidentDescription, setIncidentDescription] = useState("");
+  const {
+    formData,
+    updateFormField,
+    photoPairs,
+    setPhotoPairs,
+    lastSaved,
+    clearDraft,
+    hasDraft,
+  } = useContractorFieldReportDraft(token, contactName);
 
   useEffect(() => {
     loadCustomers();
   }, []);
 
   useEffect(() => {
-    if (selectedCustomer) {
-      loadLocations(selectedCustomer);
+    if (formData.selectedCustomer) {
+      loadLocations(formData.selectedCustomer);
     } else {
       setLocations({ suggested: [], all: [] });
-      setSelectedLocation("");
+      updateFormField('selectedLocation', '');
     }
-  }, [selectedCustomer]);
+  }, [formData.selectedCustomer]);
 
   const loadCustomers = async () => {
     setIsLoadingCustomers(true);
@@ -98,7 +105,7 @@ export function VerifiedFormStep({
 
   const loadLocations = async (customerName: string) => {
     setIsLoadingLocations(true);
-    setSelectedLocation("");
+    updateFormField('selectedLocation', '');
     try {
       const { data, error } = await supabase.functions.invoke("get-contractor-locations", {
         body: { token, phone, contactId, contactType, customerName },
@@ -114,10 +121,15 @@ export function VerifiedFormStep({
     }
   };
 
+  const handleSignatureSave = (signature: string) => {
+    updateFormField('signatureData', signature);
+    setShowSignaturePad(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedCustomer || !selectedLocation || !contractorName.trim() || !workDescription.trim()) {
+    if (!formData.selectedCustomer || !formData.selectedLocation || !formData.contractorName.trim() || !formData.workDescription.trim()) {
       setError("Please fill in all required fields");
       return;
     }
@@ -126,28 +138,61 @@ export function VerifiedFormStep({
     setError(null);
 
     try {
+      // Prepare photo data for submission
+      const photos = photoPairs
+        .filter(pair => pair.before || pair.after)
+        .flatMap((pair, index) => {
+          const result = [];
+          if (pair.before) {
+            result.push({
+              type: 'before',
+              fileUrl: pair.before.fileUrl,
+              fileName: pair.before.fileName,
+              notes: pair.before.notes,
+              displayOrder: index * 2,
+            });
+          }
+          if (pair.after) {
+            result.push({
+              type: 'after',
+              fileUrl: pair.after.fileUrl,
+              fileName: pair.after.fileName,
+              notes: pair.after.notes,
+              displayOrder: index * 2 + 1,
+              pairedWithIndex: pair.before ? index * 2 : null,
+            });
+          }
+          return result;
+        });
+
       const { data, error } = await supabase.functions.invoke("submit-contractor-field-report", {
         body: {
           token,
           phone,
           contactId,
           contactType,
-          customerName: selectedCustomer,
-          locationName: selectedLocation,
-          contractorName: contractorName.trim(),
+          customerName: formData.selectedCustomer,
+          locationName: formData.selectedLocation,
+          contractorName: formData.contractorName.trim(),
           reportData: {
-            reportDate,
-            workDescription: workDescription.trim(),
-            carpetConditionRating: carpetRating[0],
-            hardfloorConditionRating: hardfloorRating[0],
-            flooringState: flooringState.trim() || null,
-            swmsCompleted,
-            testTagCompleted,
-            equipmentGoodOrder,
-            problemAreas,
-            problemAreasDescription: problemAreas ? problemAreasDescription.trim() : null,
-            incident,
-            incidentDescription: incident ? incidentDescription.trim() : null,
+            reportDate: formData.reportDate,
+            arrivalTime: formData.arrivalTime || null,
+            workDescription: formData.workDescription.trim(),
+            internalNotes: formData.internalNotes.trim() || null,
+            carpetConditionRating: formData.carpetRating,
+            hardfloorConditionRating: formData.hardfloorRating,
+            flooringState: formData.flooringState.trim() || null,
+            swmsCompleted: formData.swmsCompleted,
+            testTagCompleted: formData.testTagCompleted,
+            equipmentGoodOrder: formData.equipmentGoodOrder,
+            problemAreas: formData.problemAreas,
+            problemAreasDescription: formData.problemAreas ? formData.problemAreasDescription.trim() : null,
+            methodsAttempted: formData.problemAreas ? formData.methodsAttempted.trim() : null,
+            incident: formData.incident,
+            incidentDescription: formData.incident ? formData.incidentDescription.trim() : null,
+            signatureData: formData.signatureData || null,
+            signatureName: formData.signatureName.trim() || null,
+            photos,
           },
         },
       });
@@ -155,6 +200,7 @@ export function VerifiedFormStep({
       if (error) throw error;
 
       if (data.success) {
+        clearDraft();
         onSuccess(data.reportNumber);
       } else {
         setError(data.error || "Failed to submit report");
@@ -172,13 +218,51 @@ export function VerifiedFormStep({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Verified badge */}
-      <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20">
-        <CheckCircle2 className="h-4 w-4 text-green-600" />
-        <AlertDescription className="text-green-800 dark:text-green-200">
-          Phone verified{contactName ? ` - Welcome, ${contactName}` : ""}
-        </AlertDescription>
-      </Alert>
+      {/* Header with draft status and clear button */}
+      <div className="flex items-center justify-between">
+        <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20 flex-1">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800 dark:text-green-200">
+            Phone verified{contactName ? ` - Welcome, ${contactName}` : ""}
+          </AlertDescription>
+        </Alert>
+      </div>
+
+      {/* Draft status bar */}
+      {hasDraft && (
+        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Save className="h-4 w-4" />
+            {lastSaved ? (
+              <span>Draft saved {lastSaved.toLocaleTimeString()}</span>
+            ) : (
+              <span>Draft detected</span>
+            )}
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear Draft
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear Draft?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will clear all your saved progress and start fresh. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={clearDraft} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Clear Draft
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -204,7 +288,7 @@ export function VerifiedFormStep({
                 Loading customers...
               </div>
             ) : (
-              <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+              <Select value={formData.selectedCustomer} onValueChange={(v) => updateFormField('selectedCustomer', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a customer" />
                 </SelectTrigger>
@@ -252,12 +336,12 @@ export function VerifiedFormStep({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading locations...
               </div>
-            ) : !selectedCustomer ? (
+            ) : !formData.selectedCustomer ? (
               <p className="text-sm text-muted-foreground py-2">
                 Select a customer first
               </p>
             ) : (
-              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+              <Select value={formData.selectedLocation} onValueChange={(v) => updateFormField('selectedLocation', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a location" />
                 </SelectTrigger>
@@ -311,8 +395,8 @@ export function VerifiedFormStep({
               <Label htmlFor="contractorName">Your Name *</Label>
               <Input
                 id="contractorName"
-                value={contractorName}
-                onChange={(e) => setContractorName(e.target.value)}
+                value={formData.contractorName}
+                onChange={(e) => updateFormField('contractorName', e.target.value)}
                 placeholder="Enter your name"
               />
             </div>
@@ -321,22 +405,66 @@ export function VerifiedFormStep({
               <Input
                 id="reportDate"
                 type="date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
+                value={formData.reportDate}
+                onChange={(e) => updateFormField('reportDate', e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="arrivalTime" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Time of Attendance
+            </Label>
+            <Input
+              id="arrivalTime"
+              type="time"
+              value={formData.arrivalTime}
+              onChange={(e) => updateFormField('arrivalTime', e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="workDescription">Work Description *</Label>
             <Textarea
               id="workDescription"
-              value={workDescription}
-              onChange={(e) => setWorkDescription(e.target.value)}
+              value={formData.workDescription}
+              onChange={(e) => updateFormField('workDescription', e.target.value)}
               placeholder="Describe the work performed..."
               rows={4}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="internalNotes">Internal Notes</Label>
+            <Textarea
+              id="internalNotes"
+              value={formData.internalNotes}
+              onChange={(e) => updateFormField('internalNotes', e.target.value)}
+              placeholder="Any internal notes (not shown to customer)..."
+              rows={2}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Before & After Photos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Camera className="h-5 w-5" />
+            Before & After Photos
+          </CardTitle>
+          <CardDescription>
+            Document the work with before and after photos
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ContractorPhotoUpload
+            token={token}
+            initialPairs={photoPairs}
+            onPhotosChange={setPhotoPairs}
+          />
         </CardContent>
       </Card>
 
@@ -350,11 +478,11 @@ export function VerifiedFormStep({
           <div className="space-y-3">
             <div className="flex justify-between">
               <Label>Carpet Condition</Label>
-              <span className="text-sm font-medium">{carpetRating[0]}/5</span>
+              <span className="text-sm font-medium">{formData.carpetRating}/5</span>
             </div>
             <Slider
-              value={carpetRating}
-              onValueChange={setCarpetRating}
+              value={[formData.carpetRating]}
+              onValueChange={([v]) => updateFormField('carpetRating', v)}
               min={1}
               max={5}
               step={1}
@@ -364,11 +492,11 @@ export function VerifiedFormStep({
           <div className="space-y-3">
             <div className="flex justify-between">
               <Label>Hard Floor Condition</Label>
-              <span className="text-sm font-medium">{hardfloorRating[0]}/5</span>
+              <span className="text-sm font-medium">{formData.hardfloorRating}/5</span>
             </div>
             <Slider
-              value={hardfloorRating}
-              onValueChange={setHardfloorRating}
+              value={[formData.hardfloorRating]}
+              onValueChange={([v]) => updateFormField('hardfloorRating', v)}
               min={1}
               max={5}
               step={1}
@@ -379,8 +507,8 @@ export function VerifiedFormStep({
             <Label htmlFor="flooringState">Flooring State Notes</Label>
             <Textarea
               id="flooringState"
-              value={flooringState}
-              onChange={(e) => setFlooringState(e.target.value)}
+              value={formData.flooringState}
+              onChange={(e) => updateFormField('flooringState', e.target.value)}
               placeholder="Additional notes about flooring condition..."
               rows={2}
             />
@@ -396,15 +524,15 @@ export function VerifiedFormStep({
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <Label htmlFor="swms" className="cursor-pointer">SWMS Completed</Label>
-            <Switch id="swms" checked={swmsCompleted} onCheckedChange={setSwmsCompleted} />
+            <Switch id="swms" checked={formData.swmsCompleted} onCheckedChange={(v) => updateFormField('swmsCompleted', v)} />
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="testTag" className="cursor-pointer">Test & Tag Completed</Label>
-            <Switch id="testTag" checked={testTagCompleted} onCheckedChange={setTestTagCompleted} />
+            <Switch id="testTag" checked={formData.testTagCompleted} onCheckedChange={(v) => updateFormField('testTagCompleted', v)} />
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="equipment" className="cursor-pointer">Equipment in Good Order</Label>
-            <Switch id="equipment" checked={equipmentGoodOrder} onCheckedChange={setEquipmentGoodOrder} />
+            <Switch id="equipment" checked={formData.equipmentGoodOrder} onCheckedChange={(v) => updateFormField('equipmentGoodOrder', v)} />
           </div>
         </CardContent>
       </Card>
@@ -418,15 +546,27 @@ export function VerifiedFormStep({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label htmlFor="problemAreas" className="cursor-pointer">Problem Areas Identified</Label>
-              <Switch id="problemAreas" checked={problemAreas} onCheckedChange={setProblemAreas} />
+              <Switch id="problemAreas" checked={formData.problemAreas} onCheckedChange={(v) => updateFormField('problemAreas', v)} />
             </div>
-            {problemAreas && (
-              <Textarea
-                value={problemAreasDescription}
-                onChange={(e) => setProblemAreasDescription(e.target.value)}
-                placeholder="Describe the problem areas..."
-                rows={3}
-              />
+            {formData.problemAreas && (
+              <div className="space-y-3 pl-4 border-l-2 border-muted">
+                <Textarea
+                  value={formData.problemAreasDescription}
+                  onChange={(e) => updateFormField('problemAreasDescription', e.target.value)}
+                  placeholder="Describe the problem areas..."
+                  rows={3}
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="methodsAttempted">Methods Attempted to Resolve</Label>
+                  <Textarea
+                    id="methodsAttempted"
+                    value={formData.methodsAttempted}
+                    onChange={(e) => updateFormField('methodsAttempted', e.target.value)}
+                    placeholder="Describe what methods you tried to address the problem..."
+                    rows={2}
+                  />
+                </div>
+              </div>
             )}
           </div>
 
@@ -435,17 +575,73 @@ export function VerifiedFormStep({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label htmlFor="incident" className="cursor-pointer">Incident Occurred</Label>
-              <Switch id="incident" checked={incident} onCheckedChange={setIncident} />
+              <Switch id="incident" checked={formData.incident} onCheckedChange={(v) => updateFormField('incident', v)} />
             </div>
-            {incident && (
+            {formData.incident && (
               <Textarea
-                value={incidentDescription}
-                onChange={(e) => setIncidentDescription(e.target.value)}
+                value={formData.incidentDescription}
+                onChange={(e) => updateFormField('incidentDescription', e.target.value)}
                 placeholder="Describe the incident..."
                 rows={3}
               />
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Customer Signature */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <PenLine className="h-5 w-5" />
+            Customer Signature
+          </CardTitle>
+          <CardDescription>
+            Optional: Capture the customer's signature to confirm work completion
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {formData.signatureData ? (
+            <div className="space-y-3">
+              <div className="border rounded-lg p-4 bg-white">
+                <img src={formData.signatureData} alt="Customer signature" className="max-h-32 mx-auto" />
+              </div>
+              {formData.signatureName && (
+                <p className="text-sm text-muted-foreground text-center">
+                  Signed by: {formData.signatureName}
+                </p>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowSignaturePad(true)}
+                className="w-full"
+              >
+                Update Signature
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="signatureName">Customer Name</Label>
+                <Input
+                  id="signatureName"
+                  value={formData.signatureName}
+                  onChange={(e) => updateFormField('signatureName', e.target.value)}
+                  placeholder="Enter customer's name"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowSignaturePad(true)}
+                className="w-full"
+              >
+                <PenLine className="h-4 w-4 mr-2" />
+                Capture Signature
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -460,6 +656,14 @@ export function VerifiedFormStep({
           "Submit Field Report"
         )}
       </Button>
+
+      {/* Signature Pad Modal */}
+      {showSignaturePad && (
+        <SignaturePad
+          onSave={handleSignatureSave}
+          onClose={() => setShowSignaturePad(false)}
+        />
+      )}
     </form>
   );
 }
