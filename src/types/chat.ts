@@ -45,6 +45,12 @@ export interface ChatReaction {
   user_id: string;
   emoji: string;
   created_at: string;
+  profile?: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 
 export interface ChatMessage {
