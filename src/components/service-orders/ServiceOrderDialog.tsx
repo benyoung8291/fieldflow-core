@@ -772,9 +772,11 @@ export default function ServiceOrderDialog({
     return formChanged || lineItemsChanged;
   };
 
-  const handleCloseAttempt = (shouldClose: boolean) => {
-    if (!shouldClose) return;
+  const handleCloseAttempt = (newOpenState: boolean) => {
+    // If trying to open the dialog, do nothing (controlled by parent)
+    if (newOpenState) return;
     
+    // User is trying to close - check for unsaved changes
     if (hasUnsavedChanges()) {
       setShowDiscardConfirm(true);
     } else {
