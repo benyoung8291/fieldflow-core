@@ -36,7 +36,7 @@ export function ContractorPhotoUpload({
   const [pairs, setPairs] = useState<PhotoPair[]>(
     initialPairs.length > 0 ? initialPairs : [{ id: crypto.randomUUID() }]
   );
-  const [uploadingSlots, setUploadingSlots] = useState<Set<string>>(new Set());
+  const [uploadProgress, setUploadProgress] = useState<Map<string, { stage: 'compressing' | 'uploading', progress: number }>>(new Map());
   const [viewingPhoto, setViewingPhoto] = useState<{ preview: string; notes: string; index: number } | null>(null);
   const afterInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const beforeInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
@@ -123,21 +123,43 @@ export function ContractorPhotoUpload({
     if (!files || files.length === 0) return;
 
     const slotKey = `${pairId}-${type}`;
-    setUploadingSlots(prev => new Set(prev).add(slotKey));
+    setUploadProgress(prev => new Map(prev).set(slotKey, { stage: 'compressing', progress: 0 }));
 
     try {
+      const totalFiles = files.length;
+      let processedCount = 0;
+      
       const processedFiles = await Promise.all(
-        Array.from(files).map(async (file) => {
+        Array.from(files).map(async (file, fileIndex) => {
           if (!file.type.startsWith('image/')) {
             toast.error(`${file.name} is not an image`);
             return null;
           }
           
+          // Update compression progress
+          setUploadProgress(prev => new Map(prev).set(slotKey, { 
+            stage: 'compressing', 
+            progress: Math.round((fileIndex / totalFiles) * 30) 
+          }));
+          
           // Compress image
           const compressed = await compressImage(file);
           
+          // Update to uploading stage
+          setUploadProgress(prev => new Map(prev).set(slotKey, { 
+            stage: 'uploading', 
+            progress: 30 + Math.round((processedCount / totalFiles) * 70) 
+          }));
+          
           // Upload to storage immediately (background upload)
           const fileUrl = await uploadToStorage(compressed);
+          processedCount++;
+          
+          // Update upload progress
+          setUploadProgress(prev => new Map(prev).set(slotKey, { 
+            stage: 'uploading', 
+            progress: 30 + Math.round((processedCount / totalFiles) * 70) 
+          }));
           
           return { 
             fileUrl, 
@@ -150,8 +172,8 @@ export function ContractorPhotoUpload({
       const validFiles = processedFiles.filter((f): f is { fileUrl: string; preview: string; fileName: string } => f !== null);
       
       if (validFiles.length === 0) {
-        setUploadingSlots(prev => {
-          const next = new Set(prev);
+        setUploadProgress(prev => {
+          const next = new Map(prev);
           next.delete(slotKey);
           return next;
         });
@@ -194,8 +216,8 @@ export function ContractorPhotoUpload({
       console.error('Error processing images:', error);
       toast.error('Failed to upload images');
     } finally {
-      setUploadingSlots(prev => {
-        const next = new Set(prev);
+      setUploadProgress(prev => {
+        const next = new Map(prev);
         next.delete(slotKey);
         return next;
       });
@@ -279,7 +301,8 @@ export function ContractorPhotoUpload({
     const photo = type === 'before' ? pair.before : pair.after;
     const inputRefs = type === 'before' ? beforeInputRefs : afterInputRefs;
     const slotKey = `${pair.id}-${type}`;
-    const isUploading = uploadingSlots.has(slotKey);
+    const progressInfo = uploadProgress.get(slotKey);
+    const isUploading = !!progressInfo;
 
     return (
       <div className="space-y-2">
@@ -300,7 +323,16 @@ export function ContractorPhotoUpload({
         {isUploading ? (
           <div className="border-2 border-dashed rounded-lg h-48 flex flex-col items-center justify-center bg-muted/50">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-            <div className="text-sm text-muted-foreground">Uploading...</div>
+            <div className="text-sm font-medium text-foreground mb-1">
+              {progressInfo.stage === 'compressing' ? 'Compressing...' : 'Uploading...'}
+            </div>
+            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-300 ease-out"
+                style={{ width: `${progressInfo.progress}%` }}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">{progressInfo.progress}%</div>
           </div>
         ) : photo ? (
           <div className="space-y-2">
