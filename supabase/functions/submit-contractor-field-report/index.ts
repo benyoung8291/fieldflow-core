@@ -208,7 +208,7 @@ serve(async (req) => {
         swms_completed: reportData?.swmsCompleted || false,
         test_tag_completed: reportData?.testTagCompleted || false,
         equipment_good_order: reportData?.equipmentGoodOrder || false,
-        problem_areas: reportData?.problemAreas || false,
+        had_problem_areas: reportData?.problemAreas || false,
         problem_areas_description: reportData?.problemAreasDescription || null,
         methods_attempted: reportData?.methodsAttempted || null,
         had_incident: reportData?.incident || false,
