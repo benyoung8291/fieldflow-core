@@ -106,7 +106,8 @@ serve(async (req) => {
         if (contact) {
           const contactPhoneNorm = contact.phone ? normalizePhoneNumber(contact.phone) : '';
           const contactMobileNorm = contact.mobile ? normalizePhoneNumber(contact.mobile) : '';
-          phoneValid = contactPhoneNorm === normalizedPhone || contactMobileNorm === normalizedPhone;
+          phoneValid = (!!contactPhoneNorm && contactPhoneNorm === normalizedPhone) || 
+                       (!!contactMobileNorm && contactMobileNorm === normalizedPhone);
           if (phoneValid) verifiedContactId = contact.id;
         }
       } else if (contactType === 'worker') {
@@ -120,7 +121,8 @@ serve(async (req) => {
         if (profile) {
           const profilePhoneNorm = profile.phone ? normalizePhoneNumber(profile.phone) : '';
           const workerPhoneNorm = profile.worker_phone ? normalizePhoneNumber(profile.worker_phone) : '';
-          phoneValid = profilePhoneNorm === normalizedPhone || workerPhoneNorm === normalizedPhone;
+          phoneValid = (!!profilePhoneNorm && profilePhoneNorm === normalizedPhone) || 
+                       (!!workerPhoneNorm && workerPhoneNorm === normalizedPhone);
         }
       }
 
@@ -197,7 +199,9 @@ serve(async (req) => {
         needs_customer_mapping: needsCustomerMapping,
         verified_contact_id: verifiedContactId,
         report_date: reportData?.reportDate || new Date().toISOString().split('T')[0],
+        arrival_time: reportData?.arrivalTime || null,
         work_description: reportData?.workDescription || null,
+        internal_notes: reportData?.internalNotes || null,
         carpet_condition_rating: reportData?.carpetConditionRating || null,
         hardfloor_condition_rating: reportData?.hardfloorConditionRating || null,
         flooring_state: reportData?.flooringState || null,
@@ -206,8 +210,12 @@ serve(async (req) => {
         equipment_good_order: reportData?.equipmentGoodOrder || false,
         problem_areas: reportData?.problemAreas || false,
         problem_areas_description: reportData?.problemAreasDescription || null,
+        methods_attempted: reportData?.methodsAttempted || null,
         incident: reportData?.incident || false,
         incident_description: reportData?.incidentDescription || null,
+        customer_signature_data: reportData?.signatureData || null,
+        customer_signature_name: reportData?.signatureName || null,
+        customer_signature_date: reportData?.signatureData ? new Date().toISOString() : null,
       })
       .select('id, report_number')
       .single();
@@ -221,6 +229,57 @@ serve(async (req) => {
     }
 
     console.log('Field report created:', report.id, report.report_number);
+
+    // Create photo records if photos were provided
+    if (reportData?.photos && Array.isArray(reportData.photos) && reportData.photos.length > 0) {
+      const photoInserts = reportData.photos.map((photo: any) => ({
+        tenant_id: link.tenant_id,
+        field_report_id: report.id,
+        file_url: photo.fileUrl,
+        file_name: photo.fileName,
+        file_type: 'image/jpeg',
+        photo_type: photo.type,
+        notes: photo.notes || null,
+        display_order: photo.displayOrder,
+        // uploaded_by is null for anonymous contractor uploads
+      }));
+
+      const { data: insertedPhotos, error: photosError } = await supabase
+        .from('field_report_photos')
+        .insert(photoInserts)
+        .select('id, file_url, photo_type, display_order');
+
+      if (photosError) {
+        console.error('Error creating photo records:', photosError);
+        // Don't fail the whole request, just log the error
+      } else if (insertedPhotos) {
+        // Update paired_photo_id for paired photos
+        for (const photo of reportData.photos) {
+          if (photo.type === 'after' && photo.pairedWithIndex !== null) {
+            const beforePhoto = insertedPhotos.find(
+              (p: any) => p.photo_type === 'before' && p.display_order === photo.pairedWithIndex
+            );
+            const afterPhoto = insertedPhotos.find(
+              (p: any) => p.file_url === photo.fileUrl && p.photo_type === 'after'
+            );
+
+            if (beforePhoto && afterPhoto) {
+              await Promise.all([
+                supabase
+                  .from('field_report_photos')
+                  .update({ paired_photo_id: afterPhoto.id })
+                  .eq('id', beforePhoto.id),
+                supabase
+                  .from('field_report_photos')
+                  .update({ paired_photo_id: beforePhoto.id })
+                  .eq('id', afterPhoto.id)
+              ]);
+            }
+          }
+        }
+        console.log('Created', insertedPhotos.length, 'photo records');
+      }
+    }
 
     return new Response(
       JSON.stringify({
