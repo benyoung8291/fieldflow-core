@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, CheckCircle2, AlertCircle, MapPin, Building2, Camera, Trash2, Clock, PenLine, Save } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, MapPin, Building2, Camera, Trash2, Clock, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
@@ -13,7 +13,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useContractorFieldReportDraft, PhotoPair } from "@/hooks/useContractorFieldReportDraft";
 import { ContractorPhotoUpload } from "./ContractorPhotoUpload";
 import { ConditionRatingSlider } from "./ConditionRatingSlider";
-import SignaturePad from "@/components/worker/SignaturePad";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,7 +59,7 @@ export function VerifiedFormStep({
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  
   
   const [customers, setCustomers] = useState<CustomerData>({ suggested: [], all: [] });
   const [locations, setLocations] = useState<LocationData>({ suggested: [], all: [] });
@@ -123,10 +122,6 @@ export function VerifiedFormStep({
     }
   };
 
-  const handleSignatureSave = (signature: string) => {
-    updateFormField('signatureData', signature);
-    setShowSignaturePad(false);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -584,62 +579,6 @@ export function VerifiedFormStep({
         </CardContent>
       </Card>
 
-      {/* Customer Signature */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <PenLine className="h-5 w-5" />
-            Customer Signature
-          </CardTitle>
-          <CardDescription>
-            Optional: Capture the customer's signature to confirm work completion
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {formData.signatureData ? (
-            <div className="space-y-3">
-              <div className="border rounded-lg p-4 bg-white">
-                <img src={formData.signatureData} alt="Customer signature" className="max-h-32 mx-auto" />
-              </div>
-              {formData.signatureName && (
-                <p className="text-sm text-muted-foreground text-center">
-                  Signed by: {formData.signatureName}
-                </p>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowSignaturePad(true)}
-                className="w-full"
-              >
-                Update Signature
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="signatureName">Customer Name</Label>
-                <Input
-                  id="signatureName"
-                  value={formData.signatureName}
-                  onChange={(e) => updateFormField('signatureName', e.target.value)}
-                  placeholder="Enter customer's name"
-                />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowSignaturePad(true)}
-                className="w-full"
-              >
-                <PenLine className="h-4 w-4 mr-2" />
-                Capture Signature
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Submit */}
       <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
         {isSubmitting ? (
@@ -651,14 +590,6 @@ export function VerifiedFormStep({
           "Submit Field Report"
         )}
       </Button>
-
-      {/* Signature Pad Modal */}
-      {showSignaturePad && (
-        <SignaturePad
-          onSave={handleSignatureSave}
-          onClose={() => setShowSignaturePad(false)}
-        />
-      )}
     </form>
   );
 }
