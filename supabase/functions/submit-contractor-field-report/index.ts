@@ -204,7 +204,7 @@ serve(async (req) => {
         internal_notes: reportData?.internalNotes || null,
         carpet_condition_rating: reportData?.carpetConditionRating || null,
         hardfloor_condition_rating: reportData?.hardfloorConditionRating || null,
-        flooring_state: reportData?.flooringState || null,
+        flooring_state_description: reportData?.flooringState || null,
         swms_completed: reportData?.swmsCompleted || false,
         test_tag_completed: reportData?.testTagCompleted || false,
         equipment_good_order: reportData?.equipmentGoodOrder || false,
