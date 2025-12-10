@@ -183,6 +183,22 @@ serve(async (req) => {
     // Generate report number
     const reportNumber = await generateReportNumber(supabase, link.tenant_id);
 
+    // Get a system user for created_by (use first profile in tenant)
+    const { data: systemUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('tenant_id', link.tenant_id)
+      .limit(1)
+      .single();
+
+    if (!systemUser) {
+      console.error('No system user found for tenant:', link.tenant_id);
+      return new Response(
+        JSON.stringify({ error: 'server_error', details: 'No system user found for tenant' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create the field report
     const { data: report, error: reportError } = await supabase
       .from('field_reports')
@@ -195,11 +211,13 @@ serve(async (req) => {
         submission_type: submissionType,
         contractor_phone: normalizedPhone,
         contractor_name: contractorName,
+        worker_name: contractorName,
+        created_by: systemUser.id,
         manual_location_entry: manualLocationEntry || null,
         needs_customer_mapping: needsCustomerMapping,
         verified_contact_id: verifiedContactId,
         service_date: reportData?.reportDate || new Date().toISOString().split('T')[0],
-        arrival_time: reportData?.arrivalTime || null,
+        arrival_time: reportData?.arrivalTime || '00:00:00',
         work_description: reportData?.workDescription || null,
         internal_notes: reportData?.internalNotes || null,
         carpet_condition_rating: reportData?.carpetConditionRating || null,
