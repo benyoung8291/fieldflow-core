@@ -118,6 +118,7 @@ const TemplateBuilderPage = lazy(() => import("./pages/TemplateBuilderPage"));
 const TemplatesListPage = lazy(() => import("./pages/TemplatesListPage"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 const SharedFloorPlanMarkup = lazy(() => import("./pages/public/SharedFloorPlanMarkup"));
+const ContractorFieldReport = lazy(() => import("./pages/public/ContractorFieldReport"));
 const Chat = lazy(() => import("./pages/Chat"));
 const WorkerChat = lazy(() => import("./pages/worker/WorkerChat"));
 const TVAvailabilityDashboard = lazy(() => import("./pages/tv/TVAvailabilityDashboard"));
@@ -393,6 +394,7 @@ const App = () => {
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/share/floor-plan/:token" element={<SharedFloorPlanMarkup />} />
+                  <Route path="/public/contractor-field-report/:token" element={<ContractorFieldReport />} />
                   <Route path="/tv/availability" element={<TVPinGate><TVAvailabilityDashboard /></TVPinGate>} />
                   
                   <Route path="/" element={isAuthenticated ? <RedirectToDefaultRoute /> : <Navigate to="/auth" replace />} />

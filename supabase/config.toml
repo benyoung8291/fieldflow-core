@@ -137,3 +137,18 @@ verify_jwt = false
 
 [functions.update-build-timestamp]
 verify_jwt = true
+
+[functions.validate-contractor-link]
+verify_jwt = false
+
+[functions.verify-contractor-phone]
+verify_jwt = false
+
+[functions.get-contractor-customers]
+verify_jwt = false
+
+[functions.get-contractor-locations]
+verify_jwt = false
+
+[functions.submit-contractor-field-report]
+verify_jwt = false
