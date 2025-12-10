@@ -29,9 +29,10 @@ interface UnverifiedFormStepProps {
   token: string;
   phone: string;
   onSuccess: (reportNumber: string) => void;
+  onChangePhone: () => void;
 }
 
-export function UnverifiedFormStep({ token, phone, onSuccess }: UnverifiedFormStepProps) {
+export function UnverifiedFormStep({ token, phone, onSuccess, onChangePhone }: UnverifiedFormStepProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
@@ -137,13 +138,24 @@ export function UnverifiedFormStep({ token, phone, onSuccess }: UnverifiedFormSt
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Info banner */}
-      <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-800 dark:text-blue-200">
-          Your phone number wasn't found in our system. Please enter the customer and location details manually. Our team will review and map your submission.
-        </AlertDescription>
-      </Alert>
+      {/* Info banner with change phone option */}
+      <div className="flex items-center justify-between gap-2">
+        <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20 flex-1">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800 dark:text-blue-200">
+            Your phone number wasn't found in our system. Please enter details manually.
+          </AlertDescription>
+        </Alert>
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="sm" 
+          onClick={onChangePhone}
+          className="shrink-0"
+        >
+          Change Number
+        </Button>
+      </div>
 
       {/* Draft status bar */}
       {hasDraft && (

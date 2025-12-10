@@ -68,11 +68,18 @@ serve(async (req) => {
 
     const tenantData = Array.isArray(link.tenants) ? link.tenants[0] : link.tenants;
 
+    // Fetch company name from tenant_settings
+    const { data: tenantSettings } = await supabase
+      .from('tenant_settings')
+      .select('company_name')
+      .eq('tenant_id', link.tenant_id)
+      .single();
+
     return new Response(
       JSON.stringify({
         valid: true,
         tenantId: link.tenant_id,
-        tenantName: tenantData?.name || 'Unknown',
+        tenantName: tenantSettings?.company_name || tenantData?.name || 'Field Report',
         linkName: link.name,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

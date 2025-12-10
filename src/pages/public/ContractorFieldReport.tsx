@@ -78,6 +78,12 @@ export default function ContractorFieldReport() {
     setStep("success");
   };
 
+  const handleChangePhone = () => {
+    setPhone("");
+    setPhoneData(null);
+    setStep("phone");
+  };
+
   if (step === "loading") {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
@@ -170,6 +176,7 @@ export default function ContractorFieldReport() {
             contactName={phoneData.contactName}
             suggestedCustomers={phoneData.suggestedCustomers}
             onSuccess={handleSubmitSuccess}
+            onChangePhone={handleChangePhone}
           />
         )}
 
@@ -178,6 +185,7 @@ export default function ContractorFieldReport() {
             token={token!}
             phone={phone}
             onSuccess={handleSubmitSuccess}
+            onChangePhone={handleChangePhone}
           />
         )}
       </div>
