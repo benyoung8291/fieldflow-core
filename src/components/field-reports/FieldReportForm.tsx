@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import SignaturePad from '@/components/worker/SignaturePad';
+
 import BeforeAfterPhotoUpload from './BeforeAfterPhotoUpload';
 import { Save, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -49,7 +49,7 @@ export default function FieldReportForm({
   beforePhotosCount = 0
 }: FieldReportFormProps) {
   const [loading, setLoading] = useState(false);
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  
   const [photoPairs, setPhotoPairs] = useState<PhotoPair[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [draftReportId, setDraftReportId] = useState<string | null>(null);
@@ -1028,23 +1028,6 @@ export default function FieldReportForm({
               )}
             </div>
 
-            {/* Customer Signature */}
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="font-semibold">Customer Signature</h3>
-              {formData.customer_signature_data ? (
-                <div className="space-y-2">
-                  <img src={formData.customer_signature_data} alt="Signature" className="border rounded p-2 bg-white" />
-                  <Button variant="outline" onClick={() => setShowSignaturePad(true)}>
-                    Update Signature
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={() => setShowSignaturePad(true)}>
-                  Capture Signature
-                </Button>
-              )}
-            </div>
-
             <Button
               onClick={handleSubmit}
               disabled={loading || isApproved}
@@ -1056,22 +1039,6 @@ export default function FieldReportForm({
           </CardContent>
         </Card>
       </div>
-
-      {showSignaturePad && (
-        <SignaturePad
-          onSave={(signatureData) => {
-            setFormData({
-              ...formData,
-              customer_signature_data: signatureData,
-              customer_signature_name: '',
-              customer_signature_date: new Date().toISOString(),
-            });
-            setShowSignaturePad(false);
-            toast.success('Signature captured');
-          }}
-          onClose={() => setShowSignaturePad(false)}
-        />
-      )}
     </>
   );
 }
