@@ -40,7 +40,15 @@ export function useChannelMessages(channelId: string | null) {
             avatar_url
           ),
           attachments:chat_attachments(*),
-          reactions:chat_reactions(*)
+          reactions:chat_reactions(
+            *,
+            profile:profiles!chat_reactions_user_id_fkey(
+              id,
+              first_name,
+              last_name,
+              avatar_url
+            )
+          )
         `)
         .eq("channel_id", channelId)
         .order("created_at", { ascending: true })
@@ -118,7 +126,15 @@ export function useChannelMessages(channelId: string | null) {
                 avatar_url
               ),
               attachments:chat_attachments(*),
-              reactions:chat_reactions(*)
+              reactions:chat_reactions(
+                *,
+                profile:profiles!chat_reactions_user_id_fkey(
+                  id,
+                  first_name,
+                  last_name,
+                  avatar_url
+                )
+              )
             `)
             .eq("id", payload.new.id)
             .single();
@@ -286,7 +302,15 @@ export function useOlderMessages(channelId: string | null, oldestMessageId: stri
             avatar_url
           ),
           attachments:chat_attachments(*),
-          reactions:chat_reactions(*)
+          reactions:chat_reactions(
+            *,
+            profile:profiles!chat_reactions_user_id_fkey(
+              id,
+              first_name,
+              last_name,
+              avatar_url
+            )
+          )
         `)
         .eq("channel_id", channelId)
         .lt("created_at", oldestMsg.created_at)
