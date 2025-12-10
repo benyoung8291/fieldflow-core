@@ -27,7 +27,7 @@ export const useAuthGuard = () => {
       return profile?.is_active ?? true;
     },
     refetchInterval: 30000, // Check every 30 seconds
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Don't refetch on window focus - prevents data loss
   });
 
   useEffect(() => {

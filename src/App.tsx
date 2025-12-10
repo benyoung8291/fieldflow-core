@@ -339,8 +339,9 @@ const App = () => {
         return;
       }
       
-      // SECURITY: Clear user access cache on any auth change to prevent stale permissions
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      // SECURITY: Clear user access cache only on actual sign in/out events
+      // TOKEN_REFRESHED is a background operation and should NOT clear cache (causes data loss on window switch)
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         queryClient.removeQueries({ queryKey: ["user-access"] });
       }
       
