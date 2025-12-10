@@ -374,9 +374,28 @@ export default function ServiceOrderDetails() {
       )
       .subscribe();
 
+    // Listen for purchase order changes linked to this service order
+    const purchaseOrdersChannel = supabase
+      .channel(`purchase-orders-for-so-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'purchase_orders',
+          filter: `service_order_id=eq.${id}`
+        },
+        () => {
+          console.log('[ServiceOrderDetails] Purchase orders changed, refreshing');
+          queryClient.invalidateQueries({ queryKey: ["service-order-purchase-orders", id] });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(purchaseOrdersChannel);
     };
   }, [id, queryClient]);
 

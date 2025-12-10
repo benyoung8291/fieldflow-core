@@ -28,10 +28,10 @@ export default function ServiceOrderPurchaseOrdersTab({
 }: ServiceOrderPurchaseOrdersTabProps) {
   const navigate = useNavigate();
 
-  const { data: purchaseOrders, isLoading, refetch } = useQuery({
+  const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ["service-order-purchase-orders", serviceOrderId],
     queryFn: async () => {
-      // Direct table query for better performance and live data
+      // Direct table query for better performance
       const { data: pos, error } = await supabase
         .from('purchase_orders')
         .select('*, suppliers(id, name, abn)')
@@ -42,8 +42,7 @@ export default function ServiceOrderPurchaseOrdersTab({
       
       return pos || [];
     },
-    refetchInterval: 5000, // Auto-refetch every 5 seconds for live updates
-    staleTime: 1000, // Consider data stale after 1 second
+    staleTime: 5 * 60 * 1000, // 5 minutes - real-time subscription handles live updates
   });
 
   if (isLoading) {
