@@ -97,7 +97,13 @@ export function ContractorPhotoUpload({
   };
 
   const uploadToStorage = async (file: File): Promise<string> => {
-    const fileName = `contractor/${token}/${Date.now()}-${file.name}`;
+    // Sanitize filename - replace spaces and special characters with dashes
+    const sanitizedName = file.name
+      .replace(/[^a-zA-Z0-9.-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    const fileName = `contractor/${token}/${Date.now()}-${sanitizedName}`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('field-report-photos')
       .upload(fileName, file, { upsert: true });
@@ -164,8 +170,9 @@ export function ContractorPhotoUpload({
             updatedPairs[currentPairIndex].after = { ...fileData, notes: '' };
           }
           
-          // Auto-create new row if this pair is now complete
-          if (updatedPairs[currentPairIndex].before && updatedPairs[currentPairIndex].after) {
+          // Auto-create new row if this pair is now complete and no empty row exists
+          const hasEmptyPair = updatedPairs.some(p => !p.before && !p.after);
+          if (updatedPairs[currentPairIndex].before && updatedPairs[currentPairIndex].after && !hasEmptyPair) {
             updatedPairs.push({ id: crypto.randomUUID() });
           }
         } else {
@@ -245,8 +252,25 @@ export function ContractorPhotoUpload({
   };
 
   const addNewPair = () => {
+    // Check if there's already an empty pair (no before AND no after)
+    const hasEmptyPair = pairs.some(p => !p.before && !p.after);
+    if (hasEmptyPair) {
+      toast.info('Please fill the empty row before adding another');
+      return;
+    }
+    
     const newPair: PhotoPair = { id: crypto.randomUUID() };
     const updatedPairs = [...pairs, newPair];
+    setPairs(updatedPairs);
+    onPhotosChange(updatedPairs);
+  };
+
+  const removeRow = (pairId: string) => {
+    const updatedPairs = pairs.filter(p => p.id !== pairId);
+    // Ensure at least one row remains
+    if (updatedPairs.length === 0) {
+      updatedPairs.push({ id: crypto.randomUUID() });
+    }
     setPairs(updatedPairs);
     onPhotosChange(updatedPairs);
   };
@@ -341,9 +365,22 @@ export function ContractorPhotoUpload({
       
       <div className="space-y-3">
         {pairs.map((pair, index) => (
-          <div key={pair.id} className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border rounded-lg bg-card">
+          <div key={pair.id} className="relative grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border rounded-lg bg-card">
             {renderPhotoSlot(pair, index, 'before')}
             {renderPhotoSlot(pair, index, 'after')}
+            
+            {/* Remove row button - only show if row is empty AND there's more than one row */}
+            {!pair.before && !pair.after && pairs.length > 1 && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+                onClick={() => removeRow(pair.id)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         ))}
       </div>
