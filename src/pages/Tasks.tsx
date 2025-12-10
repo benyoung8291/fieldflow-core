@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban, ChevronDown, CheckSquare, MessageSquare, Send } from "lucide-react";
+import { Plus, Search, Filter, Calendar, User, Link as LinkIcon, ExternalLink, List, Kanban, ChevronDown, CheckSquare, MessageSquare, Send, ArrowUpDown } from "lucide-react";
 import TaskDialog, { TaskFormData } from "@/components/tasks/TaskDialog";
 import TaskKanbanView from "@/components/tasks/TaskKanbanView";
 import { format, formatDistanceToNow } from "date-fns";
@@ -53,6 +53,7 @@ export default function Tasks() {
   const [groupMode, setGroupMode] = useState<'status' | 'tag' | 'document'>('status');
   const [kanbanViewMode, setKanbanViewMode] = useState<'date' | 'status'>('status');
   const [showCompleted, setShowCompleted] = useState(false);
+  const [sortOption, setSortOption] = useState<string>('due_date-asc');
   const queryClient = useQueryClient();
   const pagination = usePagination({ initialPageSize: 50 });
 
@@ -624,6 +625,41 @@ export default function Tasks() {
     return Array.from(tagSet).sort();
   }, [tasks]);
 
+  // Sort function based on sort option
+  const sortTasks = (tasksToSort: any[], isCompletedGroup: boolean = false) => {
+    const [field, direction] = sortOption.split('-');
+    const multiplier = direction === 'desc' ? -1 : 1;
+    
+    return [...tasksToSort].sort((a, b) => {
+      // Completed tasks always sort by completed_at (most recent first) by default
+      if (isCompletedGroup && field !== 'completed_at') {
+        const dateA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+        const dateB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+        return dateB - dateA;
+      }
+      
+      switch (field) {
+        case 'completed_at':
+          const compA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+          const compB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+          return (compA - compB) * multiplier;
+        case 'due_date':
+          const dueA = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+          const dueB = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+          return (dueA - dueB) * multiplier;
+        case 'priority':
+          const priorityOrder: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+          return ((priorityOrder[a.priority] || 0) - (priorityOrder[b.priority] || 0)) * multiplier;
+        case 'created_at':
+          const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return (createdA - createdB) * multiplier;
+        default:
+          return 0;
+      }
+    });
+  };
+
   // Group tasks by status
   const groupedTasks = useMemo(() => {
     const groups: Record<string, any[]> = {
@@ -637,8 +673,15 @@ export default function Tasks() {
         groups[task.status].push(task);
       }
     });
+    
+    // Sort each group
+    groups['pending'] = sortTasks(groups['pending']);
+    groups['in_progress'] = sortTasks(groups['in_progress']);
+    groups['completed'] = sortTasks(groups['completed'], true);
+    groups['cancelled'] = sortTasks(groups['cancelled']);
+    
     return groups;
-  }, [filteredTasksForDisplay]);
+  }, [filteredTasksForDisplay, sortOption]);
 
   // Group tasks by tag
   const groupedByTag = useMemo(() => {
@@ -657,8 +700,13 @@ export default function Tasks() {
         });
       }
     });
+    // Sort tasks within each group
+    Object.keys(groups).forEach(key => {
+      const hasCompletedOnly = groups[key].every((t: any) => t.status === 'completed');
+      groups[key] = sortTasks(groups[key], hasCompletedOnly);
+    });
     return groups;
-  }, [filteredTasksForDisplay]);
+  }, [filteredTasksForDisplay, sortOption]);
 
   // Group tasks by document type
   const groupedByDocument = useMemo(() => {
@@ -675,8 +723,13 @@ export default function Tasks() {
         groups[task.document_type].push(task);
       }
     });
+    // Sort tasks within each group
+    Object.keys(groups).forEach(key => {
+      const hasCompletedOnly = groups[key].every((t: any) => t.status === 'completed');
+      groups[key] = sortTasks(groups[key], hasCompletedOnly);
+    });
     return groups;
-  }, [filteredTasksForDisplay]);
+  }, [filteredTasksForDisplay, sortOption]);
   const statusLabels: Record<string, string> = {
     'pending': 'Pending',
     'in_progress': 'In Progress',
@@ -1205,6 +1258,23 @@ export default function Tasks() {
                   </SelectContent>
                 </Select>
               )}
+
+              <Select value={sortOption} onValueChange={setSortOption}>
+                <SelectTrigger className="h-8 text-sm w-44">
+                  <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="due_date-asc">Due Date (Earliest)</SelectItem>
+                  <SelectItem value="due_date-desc">Due Date (Latest)</SelectItem>
+                  <SelectItem value="completed_at-desc">Completed (Recent)</SelectItem>
+                  <SelectItem value="completed_at-asc">Completed (Oldest)</SelectItem>
+                  <SelectItem value="priority-desc">Priority (High to Low)</SelectItem>
+                  <SelectItem value="priority-asc">Priority (Low to High)</SelectItem>
+                  <SelectItem value="created_at-desc">Created (Recent)</SelectItem>
+                  <SelectItem value="created_at-asc">Created (Oldest)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             </div>
           </CardContent>
