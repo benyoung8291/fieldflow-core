@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useWorkerRole } from "@/hooks/useWorkerRole";
 import { Loader2 } from "lucide-react";
+import { useLogAccessDenied } from "@/hooks/useLogAccessDenied";
 
 interface SupervisorProtectedRouteProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ export const SupervisorProtectedRoute = ({
 }: SupervisorProtectedRouteProps) => {
   const { isSupervisorOrAbove, isLoading } = useWorkerRole();
   const location = useLocation();
+  const logAccessDenied = useLogAccessDenied();
 
   if (isLoading) {
     return (
@@ -25,6 +27,11 @@ export const SupervisorProtectedRoute = ({
   }
 
   if (!isSupervisorOrAbove) {
+    logAccessDenied({
+      attemptedRoute: location.pathname,
+      reason: 'supervisor_role_required',
+      redirectTo: '/worker/dashboard',
+    });
     return <Navigate to="/worker/dashboard" state={{ from: location }} replace />;
   }
 
