@@ -1,7 +1,6 @@
 import { useLocation, Link } from "react-router-dom";
 import { Home, Calendar, Clock, MoreHorizontal, FileText, User, CalendarClock, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useViewMode } from "@/contexts/ViewModeContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +37,6 @@ const moreNavItems: NavItem[] = [
 
 export const WorkerMobileBottomNav = () => {
   const location = useLocation();
-  const { isMobile } = useViewMode();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const { data: access, isLoading } = useUserAccess();
@@ -82,9 +80,6 @@ export const WorkerMobileBottomNav = () => {
 
   const { data: unreadData } = useUnreadMessages();
   const chatUnreadCount = unreadData?.totalUnread || 0;
-
-  // Only show on mobile devices
-  if (!isMobile) return null;
 
   // Don't show when not authenticated
   if (!isAuthenticated) return null;
