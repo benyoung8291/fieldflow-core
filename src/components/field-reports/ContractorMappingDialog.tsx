@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -11,15 +11,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, User, MapPin, Building2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Phone, User, MapPin, Building2, Search, Check, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ContractorMappingDialogProps {
   open: boolean;
@@ -41,17 +37,21 @@ export function ContractorMappingDialog({
   const queryClient = useQueryClient();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [locationSearch, setLocationSearch] = useState("");
 
   // Reset selections when dialog opens with new report
   useEffect(() => {
     if (open && report) {
       setSelectedCustomerId("");
       setSelectedLocationId("");
+      setCustomerSearch("");
+      setLocationSearch("");
     }
   }, [open, report?.id]);
 
   // Fetch customers
-  const { data: customers = [] } = useQuery({
+  const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ["customers-for-mapping"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -66,13 +66,13 @@ export function ContractorMappingDialog({
   });
 
   // Fetch locations for selected customer
-  const { data: locations = [] } = useQuery({
+  const { data: locations = [], isLoading: loadingLocations } = useQuery({
     queryKey: ["locations-for-mapping", selectedCustomerId],
     queryFn: async () => {
       if (!selectedCustomerId) return [];
       const { data, error } = await supabase
         .from("customer_locations")
-        .select("id, name")
+        .select("id, name, address")
         .eq("customer_id", selectedCustomerId)
         .eq("is_active", true)
         .order("name");
@@ -81,6 +81,26 @@ export function ContractorMappingDialog({
     },
     enabled: !!selectedCustomerId,
   });
+
+  // Filter customers by search
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return customers;
+    const search = customerSearch.toLowerCase();
+    return customers.filter(c => c.name.toLowerCase().includes(search));
+  }, [customers, customerSearch]);
+
+  // Filter locations by search
+  const filteredLocations = useMemo(() => {
+    if (!locationSearch.trim()) return locations;
+    const search = locationSearch.toLowerCase();
+    return locations.filter(l => 
+      l.name.toLowerCase().includes(search) || 
+      l.address?.toLowerCase().includes(search)
+    );
+  }, [locations, locationSearch]);
+
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+  const selectedLocation = locations.find(l => l.id === selectedLocationId);
 
   const saveMapping = useMutation({
     mutationFn: async () => {
@@ -117,13 +137,14 @@ export function ContractorMappingDialog({
   // Reset location when customer changes
   useEffect(() => {
     setSelectedLocationId("");
+    setLocationSearch("");
   }, [selectedCustomerId]);
 
   if (!report) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Map Contractor Report</DialogTitle>
         </DialogHeader>
@@ -150,72 +171,133 @@ export function ContractorMappingDialog({
             )}
             
             {report.manual_location_entry && (
-              <div className="flex items-start gap-2 text-sm">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <span className="text-foreground font-medium">
-                  "{report.manual_location_entry}"
-                </span>
+              <div className="flex items-start gap-2 text-sm bg-yellow-50 dark:bg-yellow-900/20 -mx-4 -mb-2 p-3 mt-2 border-t">
+                <MapPin className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Location entered by contractor:</span>
+                  <p className="text-foreground font-medium">"{report.manual_location_entry}"</p>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Customer Selection */}
+          {/* Customer Selection with Search */}
           <div className="space-y-2">
             <Label>Customer</Label>
-            <Select
-              value={selectedCustomerId}
-              onValueChange={setSelectedCustomerId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select customer..." />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      {customer.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search customers..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <ScrollArea className="h-[150px] border rounded-md">
+              {loadingCustomers ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredCustomers.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No customers found
+                </div>
+              ) : (
+                <div className="p-1">
+                  {filteredCustomers.map((customer) => (
+                    <button
+                      key={customer.id}
+                      onClick={() => setSelectedCustomerId(customer.id)}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors text-left",
+                        selectedCustomerId === customer.id
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-accent"
+                      )}
+                    >
+                      <Building2 className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{customer.name}</span>
+                      {selectedCustomerId === customer.id && (
+                        <Check className="h-4 w-4 ml-auto flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+            {selectedCustomer && (
+              <p className="text-sm text-muted-foreground">
+                Selected: <span className="font-medium text-foreground">{selectedCustomer.name}</span>
+              </p>
+            )}
           </div>
 
-          {/* Location Selection */}
+          {/* Location Selection with Search */}
           <div className="space-y-2">
             <Label>Location</Label>
-            <Select
-              value={selectedLocationId}
-              onValueChange={setSelectedLocationId}
-              disabled={!selectedCustomerId}
-            >
-              <SelectTrigger>
-                <SelectValue 
-                  placeholder={
-                    selectedCustomerId 
-                      ? "Select location..." 
-                      : "Select customer first"
-                  } 
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.length === 0 ? (
-                  <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-                    No locations found for this customer
-                  </div>
-                ) : (
-                  locations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        {location.name}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={selectedCustomerId ? "Search locations..." : "Select customer first"}
+                value={locationSearch}
+                onChange={(e) => setLocationSearch(e.target.value)}
+                className="pl-9"
+                disabled={!selectedCustomerId}
+              />
+            </div>
+            <ScrollArea className="h-[150px] border rounded-md">
+              {!selectedCustomerId ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Select a customer first
+                </div>
+              ) : loadingLocations ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredLocations.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No locations found
+                </div>
+              ) : (
+                <div className="p-1">
+                  {filteredLocations.map((location) => (
+                    <button
+                      key={location.id}
+                      onClick={() => setSelectedLocationId(location.id)}
+                      className={cn(
+                        "w-full flex items-start gap-2 px-3 py-2 text-sm rounded-md transition-colors text-left",
+                        selectedLocationId === location.id
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-accent"
+                      )}
+                    >
+                      <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{location.name}</p>
+                        {location.address && (
+                          <p className={cn(
+                            "text-xs truncate",
+                            selectedLocationId === location.id
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground"
+                          )}>
+                            {location.address}
+                          </p>
+                        )}
                       </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+                      {selectedLocationId === location.id && (
+                        <Check className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+            {selectedLocation && (
+              <p className="text-sm text-muted-foreground">
+                Selected: <span className="font-medium text-foreground">{selectedLocation.name}</span>
+              </p>
+            )}
           </div>
         </div>
 

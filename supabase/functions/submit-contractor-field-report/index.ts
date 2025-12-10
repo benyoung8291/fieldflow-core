@@ -249,6 +249,7 @@ serve(async (req) => {
     console.log('Field report created:', report.id, report.report_number);
 
     // Create photo records if photos were provided
+    console.log('Photos received:', reportData?.photos?.length || 0, 'photos:', JSON.stringify(reportData?.photos));
     if (reportData?.photos && Array.isArray(reportData.photos) && reportData.photos.length > 0) {
       const photoInserts = reportData.photos.map((photo: any) => ({
         tenant_id: link.tenant_id,
