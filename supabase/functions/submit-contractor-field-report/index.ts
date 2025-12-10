@@ -211,7 +211,7 @@ serve(async (req) => {
         problem_areas: reportData?.problemAreas || false,
         problem_areas_description: reportData?.problemAreasDescription || null,
         methods_attempted: reportData?.methodsAttempted || null,
-        incident: reportData?.incident || false,
+        had_incident: reportData?.incident || false,
         incident_description: reportData?.incidentDescription || null,
         customer_signature_data: reportData?.signatureData || null,
         customer_signature_name: reportData?.signatureName || null,
