@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle, CheckCircle, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, AlertTriangle, CheckCircle, FileText, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PhoneEntryStep } from "@/components/contractor-field-report/PhoneEntryStep";
 import { VerifiedFormStep } from "@/components/contractor-field-report/VerifiedFormStep";
@@ -121,6 +122,13 @@ export default function ContractorFieldReport() {
     );
   }
 
+  const handleSubmitAnother = () => {
+    setPhone("");
+    setPhoneData(null);
+    setReportNumber("");
+    setStep("phone");
+  };
+
   if (step === "success") {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
@@ -142,6 +150,10 @@ export default function ContractorFieldReport() {
             <p className="text-sm text-muted-foreground">
               The team will review your submission. You can close this page.
             </p>
+            <Button onClick={handleSubmitAnother} className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Submit Another Report
+            </Button>
           </CardContent>
         </Card>
       </div>
