@@ -29,7 +29,7 @@ function checkRateLimit(ip: string): boolean {
 // Normalize phone number to a consistent format
 function normalizePhoneNumber(phone: string): string {
   // Remove all non-numeric characters except leading +
-  let normalized = phone.replace(/[^\\d+]/g, '');
+  let normalized = phone.replace(/[^\d+]/g, '');
 
   // Handle Australian formats
   if (normalized.startsWith('+61')) {
@@ -113,12 +113,14 @@ serve(async (req) => {
       .not('supplier_id', 'is', null);
 
     let matchedContact = null;
-    if (!contactError && contacts) {
+    if (!contactError && contacts && normalizedPhone) {
       for (const contact of contacts) {
         const contactPhoneNorm = contact.phone ? normalizePhoneNumber(contact.phone) : '';
         const contactMobileNorm = contact.mobile ? normalizePhoneNumber(contact.mobile) : '';
         
-        if (contactPhoneNorm === normalizedPhone || contactMobileNorm === normalizedPhone) {
+        // Only match if contact has a phone and it matches the normalized input
+        if ((contactPhoneNorm && contactPhoneNorm === normalizedPhone) || 
+            (contactMobileNorm && contactMobileNorm === normalizedPhone)) {
           matchedContact = contact;
           break;
         }
@@ -193,12 +195,14 @@ serve(async (req) => {
       .eq('tenant_id', link.tenant_id);
 
     let matchedWorker = null;
-    if (!profileError && profiles) {
+    if (!profileError && profiles && normalizedPhone) {
       for (const profile of profiles) {
         const profilePhoneNorm = profile.phone ? normalizePhoneNumber(profile.phone) : '';
         const workerPhoneNorm = profile.worker_phone ? normalizePhoneNumber(profile.worker_phone) : '';
         
-        if (profilePhoneNorm === normalizedPhone || workerPhoneNorm === normalizedPhone) {
+        // Only match if profile has a phone and it matches the normalized input
+        if ((profilePhoneNorm && profilePhoneNorm === normalizedPhone) || 
+            (workerPhoneNorm && workerPhoneNorm === normalizedPhone)) {
           matchedWorker = profile;
           break;
         }
