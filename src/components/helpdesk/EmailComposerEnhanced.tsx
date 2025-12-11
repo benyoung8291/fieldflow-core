@@ -72,16 +72,26 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
       const editor = editorRef.current?.getEditor();
       if (editor) {
         const range = editor.getSelection(true);
-        const index = range ? range.index : editor.getLength() - 1;
+        let index = range ? range.index : editor.getLength() - 1;
         
         // Check if this is a card snippet (has table structure with border styling)
         const isCardSnippet = /<table[^>]*style="[^"]*border[^"]*"/.test(html);
         
         if (isCardSnippet) {
+          // Ensure there's editable space before the card if at start
+          if (index === 0) {
+            editor.insertText(0, '\n', 'user');
+            index = 1;
+          }
+          
           // Use custom keepHTML blot to preserve the HTML structure
           editor.insertEmbed(index, 'keepHTML', html, 'user');
-          editor.insertText(index + 1, '\n', 'user');
-          editor.setSelection(index + 2, 0);
+          
+          // Add editable space after the card
+          editor.insertText(index + 1, '\n\n', 'user');
+          
+          // Position cursor after the card in editable space
+          editor.setSelection(index + 3, 0);
         } else {
           // Regular content - insert via dangerouslyPasteHTML
           editor.clipboard.dangerouslyPasteHTML(index, html);

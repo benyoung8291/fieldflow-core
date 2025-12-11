@@ -470,21 +470,51 @@ All colors MUST be HSL.
 
 /* Custom keepHTML blot for card snippets */
 .rich-text-editor .ql-editor .ql-keep-html {
-  display: block;
+  display: inline-block;
+  max-width: 380px;
   margin: 8px 0;
   padding: 0;
   user-select: none;
   cursor: default;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  transition: outline 0.15s ease;
+}
+
+.rich-text-editor .ql-editor .ql-keep-html:hover {
+  outline: 2px solid hsl(var(--primary) / 0.4);
 }
 
 .rich-text-editor .ql-editor .ql-keep-html table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 12px;
 }
 
 .rich-text-editor .ql-editor .ql-keep-html td {
-  padding: 8px 12px;
+  padding: 6px 10px;
   vertical-align: top;
+}
+
+.rich-text-editor .ql-editor .ql-keep-html h3 {
+  font-size: 14px !important;
+  margin-bottom: 2px !important;
+}
+
+.rich-text-editor .ql-editor .ql-keep-html p {
+  font-size: 12px !important;
+  margin: 2px 0 !important;
+}
+
+.rich-text-editor .ql-editor .ql-keep-html ul {
+  font-size: 12px !important;
+  margin: 4px 0 !important;
+  padding-left: 16px !important;
+}
+
+.rich-text-editor .ql-editor .ql-keep-html li {
+  margin-bottom: 2px !important;
 }
 /* Safe area utilities for mobile devices */
 @layer utilities {
