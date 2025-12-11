@@ -7524,6 +7524,7 @@ export type Database = {
           price_book_item_id: string | null
           quantity: number
           service_order_id: string
+          source_contract_line_item_id: string | null
           tenant_id: string
           unit_price: number
           updated_at: string | null
@@ -7545,6 +7546,7 @@ export type Database = {
           price_book_item_id?: string | null
           quantity?: number
           service_order_id: string
+          source_contract_line_item_id?: string | null
           tenant_id: string
           unit_price?: number
           updated_at?: string | null
@@ -7566,6 +7568,7 @@ export type Database = {
           price_book_item_id?: string | null
           quantity?: number
           service_order_id?: string
+          source_contract_line_item_id?: string | null
           tenant_id?: string
           unit_price?: number
           updated_at?: string | null
@@ -7583,6 +7586,13 @@ export type Database = {
             columns: ["service_order_id"]
             isOneToOne: false
             referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_line_items_source_contract_line_item_id_fkey"
+            columns: ["source_contract_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "service_contract_line_items"
             referencedColumns: ["id"]
           },
         ]
