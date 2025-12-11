@@ -12,40 +12,74 @@ interface RichTextEditorProps {
 
 export const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(
   ({ value, onChange, placeholder, className }, ref) => {
-  const modules = useMemo(
-    () => ({
-      toolbar: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        ['link'],
-        ['clean'],
-      ],
-      keyboard: {
-        bindings: {}, // Empty allows all default Quill bindings including Cmd+A
-      },
-      clipboard: {
-        matchVisual: false,
-      },
-    }),
-    []
-  );
+    const modules = useMemo(
+      () => ({
+        toolbar: [
+          // Undo/Redo
+          ['undo', 'redo'],
+          // Font & Size
+          [{ font: [] }],
+          [{ size: ['small', false, 'large', 'huge'] }],
+          // Text styling
+          ['bold', 'italic', 'underline', 'strike'],
+          // Colors
+          [{ color: [] }, { background: [] }],
+          // Alignment
+          [{ align: [] }],
+          // Lists & Indentation
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          [{ indent: '-1' }, { indent: '+1' }],
+          // Block elements
+          ['blockquote'],
+          // Links & Media
+          ['link', 'image'],
+          // Clear formatting
+          ['clean'],
+        ],
+        keyboard: {
+          bindings: {
+            // Ensure Cmd+A works properly
+            selectAll: {
+              key: 'A',
+              shortKey: true,
+              handler: function() {
+                return true;
+              }
+            }
+          },
+        },
+        clipboard: {
+          matchVisual: false,
+        },
+        history: {
+          delay: 1000,
+          maxStack: 100,
+          userOnly: true,
+        },
+      }),
+      []
+    );
 
     const formats = [
-      'header',
+      'font',
+      'size',
       'bold',
       'italic',
       'underline',
       'strike',
+      'color',
+      'background',
+      'align',
       'list',
       'bullet',
       'indent',
+      'blockquote',
       'link',
+      'image',
     ];
 
     return (
-      <div className={cn('rich-text-editor', className)}>
+      <div className={cn('rich-text-editor gmail-style', className)}>
         <ReactQuill
           ref={ref}
           theme="snow"
