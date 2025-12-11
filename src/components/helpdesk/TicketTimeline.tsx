@@ -984,7 +984,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
             ref={composerRef}
             onSend={(emailData) => sendReplyMutation.mutateAsync(emailData)}
             defaultTo={ticket?.sender_email || ticket?.external_email || ""}
-            defaultSubject={ticket?.subject ? `RE: ${ticket.subject}` : ""}
+            defaultSubject={ticket?.subject ? `RE: ${ticket.subject.replace(/^(RE:\s*)+/i, '')}` : ""}
             isSending={sendReplyMutation.isPending}
             emailThread={emailThread}
             ticketId={ticketId}

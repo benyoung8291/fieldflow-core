@@ -451,18 +451,10 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
               {ticketId && (
                 <SnippetInserter 
                   ticketId={ticketId} 
-                  onInsertSnippet={(html) => setBody(prev => prev + html)} 
+                  onInsertSnippet={(html) => setBody(prev => prev + html)}
+                  onOpenSnippetManager={() => setSnippetManagerOpen(true)}
                 />
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSnippetManagerOpen(true)}
-                className="h-8"
-              >
-                <Settings2 className="h-4 w-4 mr-1" />
-                Manage Snippets
-              </Button>
             </div>
             <div className="flex items-center gap-2">
               <Button

@@ -12,19 +12,25 @@ interface RichTextEditorProps {
 
 export const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(
   ({ value, onChange, placeholder, className }, ref) => {
-    const modules = useMemo(
-      () => ({
-        toolbar: [
-          [{ header: [1, 2, 3, false] }],
-          ['bold', 'italic', 'underline', 'strike'],
-          [{ list: 'ordered' }, { list: 'bullet' }],
-          [{ indent: '-1' }, { indent: '+1' }],
-          ['link'],
-          ['clean'],
-        ],
-      }),
-      []
-    );
+  const modules = useMemo(
+    () => ({
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        ['link'],
+        ['clean'],
+      ],
+      keyboard: {
+        bindings: {}, // Empty allows all default Quill bindings including Cmd+A
+      },
+      clipboard: {
+        matchVisual: false,
+      },
+    }),
+    []
+  );
 
     const formats = [
       'header',
