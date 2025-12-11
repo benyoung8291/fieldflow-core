@@ -432,7 +432,7 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
                 value={body}
                 onChange={setBody}
                 placeholder="Write your message..."
-                className="flex-1 h-full [&_.ql-toolbar]:rounded-none [&_.ql-toolbar]:border-x-0 [&_.ql-container]:rounded-none [&_.ql-container]:border-x-0 [&_.ql-container]:border-b-0"
+                className="flex-1 h-full email-composer-editor [&_.ql-toolbar]:rounded-none [&_.ql-toolbar]:border-x-0 [&_.ql-container]:rounded-none [&_.ql-container]:border-x-0 [&_.ql-container]:border-b-0"
               />
             </div>
 

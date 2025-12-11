@@ -13,14 +13,34 @@ class KeepHTMLBlot extends BlockEmbed {
 
   static create(value: string) {
     const node = super.create() as HTMLElement;
-    node.innerHTML = value;
+    
+    // Create content wrapper
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'ql-keep-html-content';
+    contentWrapper.innerHTML = value;
+    node.appendChild(contentWrapper);
+    
+    // Add delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'ql-keep-html-delete';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.type = 'button';
+    deleteBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      node.remove();
+    };
+    node.appendChild(deleteBtn);
+    
     node.setAttribute('contenteditable', 'false');
     node.setAttribute('data-keep-html', 'true');
     return node;
   }
 
   static value(node: HTMLElement) {
-    return node.innerHTML;
+    // Return only the content, not the delete button
+    const contentWrapper = node.querySelector('.ql-keep-html-content');
+    return contentWrapper ? contentWrapper.innerHTML : node.innerHTML;
   }
 }
 
