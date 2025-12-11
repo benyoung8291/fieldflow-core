@@ -328,45 +328,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  // Signature styles
-  signatureSection: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  signatureTitle: {
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
-    color: '#111827',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  signatureBox: {
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    padding: 10,
-    borderRadius: 6,
-  },
-  signatureImage: {
-    width: 160,
-    height: 60,
-    objectFit: 'contain',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 4,
-  },
-  signatureName: {
-    fontSize: 9,
-    color: '#374151',
-    marginTop: 6,
-  },
-  signatureDate: {
-    fontSize: 8,
-    color: '#6b7280',
-    marginTop: 2,
-  },
   // Footer styles
   footer: {
     position: 'absolute',
@@ -439,8 +400,6 @@ export interface FieldReportData {
   had_problem_areas?: boolean | null;
   problem_areas_description?: string | null;
   methods_attempted?: string | null;
-  customer_signature_data?: string | null;
-  customer_signature_name?: string | null;
   photos?: FieldReportPhoto[];
 }
 
@@ -692,24 +651,6 @@ export function FieldReportPDFDocument({ report, companySettings }: FieldReportP
                   <Text style={styles.problemText}>{report.methods_attempted}</Text>
                 </>
               )}
-            </View>
-          </View>
-        )}
-
-        {/* Customer Signature */}
-        {report.customer_signature_data && (
-          <View style={styles.signatureSection}>
-            <Text style={styles.signatureTitle}>Customer Acknowledgment</Text>
-            <View style={styles.signatureBox}>
-              <Image src={report.customer_signature_data} style={styles.signatureImage} />
-              {report.customer_signature_name && (
-                <Text style={styles.signatureName}>
-                  Signed by: {report.customer_signature_name}
-                </Text>
-              )}
-              <Text style={styles.signatureDate}>
-                Date: {formatDate(report.service_date)}
-              </Text>
             </View>
           </View>
         )}

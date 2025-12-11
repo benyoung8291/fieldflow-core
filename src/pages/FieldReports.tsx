@@ -34,6 +34,19 @@ import { PermissionButton } from '@/components/permissions/PermissionButton';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 
+interface EditFormData {
+  worker_name: string;
+  arrival_time: string;
+  carpet_condition_arrival: number;
+  hard_floor_condition_arrival: number;
+  flooring_state_description: string;
+  work_description: string;
+  internal_notes: string;
+  problem_areas_description: string;
+  methods_attempted: string;
+  had_problem_areas: boolean;
+}
+
 export default function FieldReports() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,6 +57,8 @@ export default function FieldReports() {
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
   const [reportToMap, setReportToMap] = useState<any>(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [editFormData, setEditFormData] = useState<EditFormData | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Log list page access for audit trail
   useLogListPageAccess('field_reports');
@@ -209,6 +224,64 @@ export default function FieldReports() {
     } catch (error) {
       console.error('Error unapproving report:', error);
       toast.error('Failed to unapprove report');
+    }
+  };
+
+  const handleEnterEditMode = () => {
+    if (!selectedReport) return;
+    setEditFormData({
+      worker_name: selectedReport.worker_name || '',
+      arrival_time: selectedReport.arrival_time || '',
+      carpet_condition_arrival: selectedReport.carpet_condition_arrival || 3,
+      hard_floor_condition_arrival: selectedReport.hard_floor_condition_arrival || 3,
+      flooring_state_description: selectedReport.flooring_state_description || '',
+      work_description: selectedReport.work_description || '',
+      internal_notes: selectedReport.internal_notes || '',
+      problem_areas_description: selectedReport.problem_areas_description || '',
+      methods_attempted: selectedReport.methods_attempted || '',
+      had_problem_areas: selectedReport.had_problem_areas || false,
+    });
+    setEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditMode(false);
+    setEditFormData(null);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!selectedReportId || !editFormData) return;
+    
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from('field_reports')
+        .update({
+          worker_name: editFormData.worker_name || null,
+          arrival_time: editFormData.arrival_time || null,
+          carpet_condition_arrival: editFormData.carpet_condition_arrival,
+          hard_floor_condition_arrival: editFormData.hard_floor_condition_arrival,
+          flooring_state_description: editFormData.flooring_state_description || null,
+          work_description: editFormData.work_description || null,
+          internal_notes: editFormData.internal_notes || null,
+          problem_areas_description: editFormData.problem_areas_description || null,
+          methods_attempted: editFormData.methods_attempted || null,
+          had_problem_areas: editFormData.had_problem_areas,
+        })
+        .eq('id', selectedReportId);
+
+      if (error) throw error;
+
+      toast.success('Report updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['field-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['field-report', selectedReportId] });
+      setEditMode(false);
+      setEditFormData(null);
+    } catch (error) {
+      console.error('Error updating report:', error);
+      toast.error('Failed to update report');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -453,16 +526,44 @@ export default function FieldReports() {
                       </div>
                       <div className="flex gap-2">
                         {selectedReport.status !== 'approved' && (
-                          <PermissionButton 
-                            module="field_reports" 
-                            permission="edit"
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => setEditMode(!editMode)}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            {editMode ? 'View' : 'Edit'}
-                          </PermissionButton>
+                          <>
+                            {editMode ? (
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={handleCancelEdit}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  onClick={handleSaveChanges}
+                                  disabled={isSaving}
+                                >
+                                  {isSaving ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Saving...
+                                    </>
+                                  ) : (
+                                    'Save Changes'
+                                  )}
+                                </Button>
+                              </>
+                            ) : (
+                              <PermissionButton 
+                                module="field_reports" 
+                                permission="edit"
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleEnterEditMode}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </PermissionButton>
+                            )}
+                          </>
                         )}
                         <Button 
                           variant="outline" 
@@ -512,7 +613,14 @@ export default function FieldReports() {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="text-muted-foreground">Worker</Label>
-                            <p className="font-medium">{selectedReport.worker_name}</p>
+                            {editMode && editFormData ? (
+                              <Input 
+                                value={editFormData.worker_name} 
+                                onChange={(e) => setEditFormData({ ...editFormData, worker_name: e.target.value })}
+                              />
+                            ) : (
+                              <p className="font-medium">{selectedReport.worker_name}</p>
+                            )}
                           </div>
                           <div>
                             <Label className="text-muted-foreground">Customer</Label>
@@ -524,7 +632,14 @@ export default function FieldReports() {
                           </div>
                           <div>
                             <Label className="text-muted-foreground">Arrival Time</Label>
-                            <p className="font-medium">{selectedReport.arrival_time}</p>
+                            {editMode && editFormData ? (
+                              <Input 
+                                value={editFormData.arrival_time} 
+                                onChange={(e) => setEditFormData({ ...editFormData, arrival_time: e.target.value })}
+                              />
+                            ) : (
+                              <p className="font-medium">{selectedReport.arrival_time}</p>
+                            )}
                           </div>
                         </div>
 
@@ -534,18 +649,55 @@ export default function FieldReports() {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <Label className="text-muted-foreground">Carpet Condition</Label>
-                              <p className="text-2xl font-bold">{selectedReport.carpet_condition_arrival}/5</p>
+                              {editMode && editFormData ? (
+                                <Select 
+                                  value={String(editFormData.carpet_condition_arrival)}
+                                  onValueChange={(v) => setEditFormData({ ...editFormData, carpet_condition_arrival: Number(v) })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {[1,2,3,4,5].map(n => (
+                                      <SelectItem key={n} value={String(n)}>{n}/5</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <p className="text-2xl font-bold">{selectedReport.carpet_condition_arrival}/5</p>
+                              )}
                             </div>
                             <div>
                               <Label className="text-muted-foreground">Hard Floor Condition</Label>
-                              <p className="text-2xl font-bold">{selectedReport.hard_floor_condition_arrival}/5</p>
+                              {editMode && editFormData ? (
+                                <Select 
+                                  value={String(editFormData.hard_floor_condition_arrival)}
+                                  onValueChange={(v) => setEditFormData({ ...editFormData, hard_floor_condition_arrival: Number(v) })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {[1,2,3,4,5].map(n => (
+                                      <SelectItem key={n} value={String(n)}>{n}/5</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <p className="text-2xl font-bold">{selectedReport.hard_floor_condition_arrival}/5</p>
+                              )}
                             </div>
                           </div>
-                          {selectedReport.flooring_state_description && (
+                          {(editMode || selectedReport.flooring_state_description) && (
                             <div>
                               <Label className="text-muted-foreground">Overall State</Label>
-                              {editMode ? (
-                                <Textarea value={selectedReport.flooring_state_description} rows={3} />
+                              {editMode && editFormData ? (
+                                <Textarea 
+                                  value={editFormData.flooring_state_description} 
+                                  onChange={(e) => setEditFormData({ ...editFormData, flooring_state_description: e.target.value })}
+                                  rows={3}
+                                  placeholder="Describe the overall flooring state..."
+                                />
                               ) : (
                                 <p className="text-sm">{selectedReport.flooring_state_description}</p>
                               )}
@@ -556,21 +708,32 @@ export default function FieldReports() {
                         {/* Work Description */}
                         <div className="space-y-3 border-t pt-4">
                           <h3 className="font-semibold">Work Completed</h3>
-                          {editMode ? (
-                            <Textarea value={selectedReport.work_description} rows={4} />
+                          {editMode && editFormData ? (
+                            <Textarea 
+                              value={editFormData.work_description} 
+                              onChange={(e) => setEditFormData({ ...editFormData, work_description: e.target.value })}
+                              rows={4}
+                              placeholder="Describe the work completed..."
+                            />
                           ) : (
                             <p className="text-sm whitespace-pre-wrap">{selectedReport.work_description}</p>
                           )}
                         </div>
 
-                        {selectedReport.internal_notes && (
+                        {/* Internal Notes */}
+                        {(editMode || selectedReport.internal_notes) && (
                           <div className="space-y-3 border-t pt-4">
                             <h3 className="font-semibold flex items-center gap-2">
                               Internal Notes
                               <Badge variant="secondary" className="text-xs">Internal Only</Badge>
                             </h3>
-                            {editMode ? (
-                              <Textarea value={selectedReport.internal_notes} rows={3} />
+                            {editMode && editFormData ? (
+                              <Textarea 
+                                value={editFormData.internal_notes} 
+                                onChange={(e) => setEditFormData({ ...editFormData, internal_notes: e.target.value })}
+                                rows={3}
+                                placeholder="Add internal notes..."
+                              />
                             ) : (
                               <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded">
                                 {selectedReport.internal_notes}
@@ -646,18 +809,36 @@ export default function FieldReports() {
                         )}
 
                         {/* Problem Areas */}
-                        {selectedReport.had_problem_areas && (
+                        {(editMode || selectedReport.had_problem_areas) && (
                           <div className="space-y-3 border-t pt-4">
                             <h3 className="font-semibold text-amber-600">Problem Areas</h3>
                             <div className="space-y-2">
                               <div>
                                 <Label className="text-muted-foreground">Description</Label>
-                                <p className="text-sm">{selectedReport.problem_areas_description}</p>
+                                {editMode && editFormData ? (
+                                  <Textarea 
+                                    value={editFormData.problem_areas_description} 
+                                    onChange={(e) => setEditFormData({ ...editFormData, problem_areas_description: e.target.value })}
+                                    rows={3}
+                                    placeholder="Describe any problem areas..."
+                                  />
+                                ) : (
+                                  <p className="text-sm">{selectedReport.problem_areas_description}</p>
+                                )}
                               </div>
-                              {selectedReport.methods_attempted && (
+                              {(editMode || selectedReport.methods_attempted) && (
                                 <div>
                                   <Label className="text-muted-foreground">Methods Attempted</Label>
-                                  <p className="text-sm">{selectedReport.methods_attempted}</p>
+                                  {editMode && editFormData ? (
+                                    <Textarea 
+                                      value={editFormData.methods_attempted} 
+                                      onChange={(e) => setEditFormData({ ...editFormData, methods_attempted: e.target.value })}
+                                      rows={3}
+                                      placeholder="Describe methods attempted to resolve..."
+                                    />
+                                  ) : (
+                                    <p className="text-sm">{selectedReport.methods_attempted}</p>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -669,23 +850,6 @@ export default function FieldReports() {
                           <div className="space-y-3 border-t pt-4">
                             <h3 className="font-semibold text-red-600">Incident Report</h3>
                             <p className="text-sm">{selectedReport.incident_description}</p>
-                          </div>
-                        )}
-
-                        {/* Customer Signature */}
-                        {selectedReport.customer_signature_data && (
-                          <div className="space-y-3 border-t pt-4">
-                            <h3 className="font-semibold">Customer Signature</h3>
-                            <img 
-                              src={selectedReport.customer_signature_data} 
-                              alt="Customer Signature" 
-                              className="border rounded h-32 bg-white"
-                            />
-                            {selectedReport.customer_signature_name && (
-                              <p className="text-sm text-muted-foreground">
-                                Signed by: {selectedReport.customer_signature_name}
-                              </p>
-                            )}
                           </div>
                         )}
                       </CardContent>
