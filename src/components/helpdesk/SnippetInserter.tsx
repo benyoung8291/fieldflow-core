@@ -203,103 +203,34 @@ export function SnippetInserter({ ticketId, onInsertSnippet, onOpenSnippetManage
       return `<pre style="font-family: inherit; white-space: pre-wrap; margin: 0;">${text}</pre>`;
     }
 
-    // Card format - email-client friendly HTML with explicit border styling (compact for editor display)
-    let html = `
-      <table cellpadding="0" cellspacing="0" border="0" width="360" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 8px 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <tr>
-          <td style="padding: 12px;">
-            <table cellpadding="0" cellspacing="0" border="0" width="100%">
-              <tr>
-                <td style="border-left: 3px solid #3b82f6; padding-left: 10px; padding-bottom: 10px;">
-                  <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 600; color: #111827;">
-                    Service Order ${so.work_order_number}
-                  </h3>
-                  <p style="margin: 0; font-size: 12px; color: #6b7280;">${so.title}</p>
-                </td>
-              </tr>
-    `;
+    // Card format - clean, compact card matching app's card style
+    const statusColor = so.status === 'completed' ? '#16a34a' : so.status === 'scheduled' ? '#f59e0b' : '#6b7280';
+    const statusBg = so.status === 'completed' ? '#dcfce7' : so.status === 'scheduled' ? '#fef3c7' : '#f3f4f6';
+    const statusLabel = so.status?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || 'Draft';
+    
+    const totalHours = lineItems?.reduce((sum: number, item: any) => sum + (item.estimated_hours || 0), 0) || 0;
+    const locationData = so.location as any;
+    const locationName = locationData?.name || locationData?.address || '';
+    const customerData = so.customer as any;
+    const customerName = customerData?.name || '';
 
-    if (so.description) {
-      html += `
-              <tr>
-                <td style="padding-bottom: 16px;">
-                  <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #374151;">Description:</p>
-                  <p style="margin: 0; font-size: 14px; color: #4b5563; white-space: pre-wrap;">${so.description}</p>
-                </td>
-              </tr>
-      `;
-    }
-
-    if (so.preferred_date) {
-      html += `
-              <tr>
-                <td style="padding-bottom: 12px;">
-                  <span style="display: inline-block; background-color: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 500;">
-                    ${formatDate(new Date(so.preferred_date), 'PP')}
-                  </span>
-                </td>
-              </tr>
-      `;
-    }
-
-    if (lineItems && lineItems.length > 0) {
-      html += `
-              <tr>
-                <td style="padding-bottom: 16px;">
-                  <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #374151;">Services:</p>
-                  <ul style="margin: 0; padding-left: 20px; list-style-type: disc;">
-      `;
-      lineItems.forEach((item: any) => {
-        html += `<li style="margin-bottom: 4px; font-size: 14px; color: #4b5563;">`;
-        html += item.description;
-        if (item.quantity > 1) html += ` <span style="color: #6b7280;">(Qty: ${item.quantity})</span>`;
-        if (item.estimated_hours) html += ` <span style="color: #6b7280;">- Est. ${item.estimated_hours}hrs</span>`;
-        html += `</li>`;
-      });
-      html += `</ul></td></tr>`;
-    }
-
-    if (appointments && appointments.length > 0) {
-      html += `
-              <tr>
-                <td style="padding-bottom: 16px;">
-                  <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #374151;">Scheduled Appointments:</p>
-      `;
-      appointments.forEach((apt: any) => {
-        html += `
-                  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px;">
-                    <tr>
-                      <td style="padding: 10px;">
-                        <p style="margin: 0; font-size: 13px; font-weight: 500; color: #111827;">${apt.title}</p>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">${formatDate(new Date(apt.start_time), 'PPp')}</p>
-                        ${apt.location_address ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">📍 ${apt.location_address}</p>` : ''}
-                      </td>
-                    </tr>
-                  </table>
-        `;
-      });
-      html += `</td></tr>`;
-    }
-
-    if (purchaseOrders && purchaseOrders.length > 0) {
-      html += `
-              <tr>
-                <td>
-                  <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #374151;">Linked Purchase Orders:</p>
-                  <ul style="margin: 0; padding-left: 20px; list-style-type: disc;">
-      `;
-      purchaseOrders.forEach((po: any) => {
-        html += `<li style="margin-bottom: 4px; font-size: 14px; color: #4b5563;">PO ${po.po_number} - ${po.supplier?.name} <span style="color: #6b7280;">(${po.status})</span></li>`;
-      });
-      html += `</ul></td></tr>`;
-    }
-
-    html += `
-            </table>
-          </td>
-        </tr>
-      </table>
-    `;
+    let html = `<div style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;background:#fff;margin:4px 0;max-width:360px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+<div style="display:flex;">
+<div style="width:4px;background:#3b82f6;border-radius:8px 0 0 8px;flex-shrink:0;"></div>
+<div style="flex:1;padding:10px 12px;">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;">
+<div style="font-size:13px;font-weight:600;color:#111827;">W/O: ${so.work_order_number}</div>
+${totalHours > 0 ? `<div style="font-size:11px;color:#6b7280;white-space:nowrap;margin-left:8px;">${totalHours}h</div>` : ''}
+</div>
+<div style="font-size:12px;color:#374151;margin-bottom:2px;">${locationName}</div>
+<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">${customerName}</div>
+<div style="display:flex;gap:4px;flex-wrap:wrap;">
+<span style="background:${statusBg};color:${statusColor};padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;">${statusLabel}</span>
+<span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;">Service Order</span>
+</div>
+</div>
+</div>
+</div>`;
     return html;
   };
 
@@ -331,80 +262,34 @@ export function SnippetInserter({ ticketId, onInsertSnippet, onOpenSnippetManage
       return `<pre style="font-family: inherit; white-space: pre-wrap; margin: 0;">${text}</pre>`;
     }
 
-    // Card format with table for better email compatibility (compact for editor display)
-    let html = `
-      <table cellpadding="0" cellspacing="0" border="0" width="360" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 8px 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <tr>
-          <td style="padding: 12px;">
-            <table cellpadding="0" cellspacing="0" border="0" width="100%">
-              <tr>
-                <td style="border-left: 3px solid #10b981; padding-left: 10px; padding-bottom: 10px;">
-                  <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 600; color: #111827;">
-                    📅 ${apt.title}
-                  </h3>
-                  <p style="margin: 0; font-size: 12px; color: #6b7280;">
-                    ${formatDate(new Date(apt.start_time), 'PPp')} - ${formatDate(new Date(apt.end_time), 'p')}
-                  </p>
-                </td>
-              </tr>
-    `;
+    // Card format - clean, compact card matching app's card style
+    const aptStatus = apt.status as string;
+    const statusColor = aptStatus === 'completed' ? '#16a34a' : aptStatus === 'checked_in' ? '#f59e0b' : '#6b7280';
+    const statusBg = aptStatus === 'completed' ? '#dcfce7' : aptStatus === 'checked_in' ? '#fef3c7' : '#f3f4f6';
+    const statusLabel = aptStatus?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || 'Scheduled';
+    
+    const duration = Math.round((new Date(apt.end_time).getTime() - new Date(apt.start_time).getTime()) / (1000 * 60 * 60) * 10) / 10;
+    const dateStr = formatDate(new Date(apt.start_time), 'EEE, MMM d');
+    const timeStr = `${formatDate(new Date(apt.start_time), 'h:mm a')} - ${formatDate(new Date(apt.end_time), 'h:mm a')}`;
 
-    if (apt.location_address) {
-      html += `
-              <tr>
-                <td style="padding-bottom: 12px;">
-                  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="padding: 10px; background-color: #ffffff; border-radius: 6px;">
-                    <tr>
-                      <td>
-                        <p style="margin: 0; font-size: 13px; color: #4b5563;"><strong>Location:</strong> ${apt.location_address}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-      `;
-    }
-
-    if (apt.description) {
-      html += `
-              <tr>
-                <td style="padding-bottom: 12px;">
-                  <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #374151;">Description:</p>
-                  <p style="margin: 0; font-size: 14px; color: #4b5563; white-space: pre-wrap;">${apt.description}</p>
-                </td>
-              </tr>
-      `;
-    }
-
-    if (apt.notes) {
-      html += `
-              <tr>
-                <td style="padding-bottom: 12px;">
-                  <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #374151;">Notes:</p>
-                  <p style="margin: 0; font-size: 14px; color: #4b5563; white-space: pre-wrap;">${apt.notes}</p>
-                </td>
-              </tr>
-      `;
-    }
-
-    if (apt.service_order) {
-      html += `
-              <tr>
-                <td style="padding-top: 12px; border-top: 1px solid #e5e7eb;">
-                  <p style="margin: 0; font-size: 12px; color: #6b7280;">
-                    Part of Service Order: <strong>${apt.service_order.work_order_number}</strong> - ${apt.service_order.title}
-                  </p>
-                </td>
-              </tr>
-      `;
-    }
-
-    html += `
-            </table>
-          </td>
-        </tr>
-      </table>
-    `;
+    let html = `<div style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;background:#fff;margin:4px 0;max-width:360px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+<div style="display:flex;">
+<div style="width:4px;background:#10b981;border-radius:8px 0 0 8px;flex-shrink:0;"></div>
+<div style="flex:1;padding:10px 12px;">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;">
+<div style="font-size:13px;font-weight:600;color:#111827;">${apt.title}</div>
+<div style="font-size:11px;color:#6b7280;white-space:nowrap;margin-left:8px;">${duration}h</div>
+</div>
+<div style="font-size:12px;color:#374151;margin-bottom:2px;">${dateStr}</div>
+<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">${timeStr}</div>
+${apt.location_address ? `<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">📍 ${apt.location_address}</div>` : ''}
+<div style="display:flex;gap:4px;flex-wrap:wrap;">
+<span style="background:${statusBg};color:${statusColor};padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;">${statusLabel}</span>
+<span style="background:#d1fae5;color:#065f46;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;">Appointment</span>
+</div>
+</div>
+</div>
+</div>`;
     return html;
   };
 
