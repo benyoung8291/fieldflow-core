@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { BlobProvider } from '@react-pdf/renderer';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,32 @@ interface FieldReportPDFPreviewProps {
   } | null;
 }
 
+const A4_WIDTH_PT = 595;
+
 export function FieldReportPDFPreview({ report, companySettings }: FieldReportPDFPreviewProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [scale, setScale] = useState<number>(0.7);
   const [currentBlob, setCurrentBlob] = useState<Blob | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-zoom to fit container width
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const containerWidth = entry.contentRect.width;
+        const padding = 32; // p-4 = 16px each side
+        const optimalScale = (containerWidth - padding) / A4_WIDTH_PT;
+        const clampedScale = Math.min(Math.max(optimalScale, 0.3), 1.5);
+        setScale(clampedScale);
+      }
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // Memoize the PDF document to prevent unnecessary re-renders
   const pdfDocument = useMemo(() => {
@@ -115,7 +137,7 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
       </div>
 
       {/* PDF Preview - Stacked Scrollable Pages */}
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={containerRef} className="flex-1 overflow-auto p-4">
         <BlobProvider document={pdfDocument!}>
           {({ blob, loading, error }) => {
             // Store blob for download
