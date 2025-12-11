@@ -467,6 +467,25 @@ All colors MUST be HSL.
   border-collapse: separate;
   border-spacing: 0;
 }
+
+/* Custom keepHTML blot for card snippets */
+.rich-text-editor .ql-editor .ql-keep-html {
+  display: block;
+  margin: 8px 0;
+  padding: 0;
+  user-select: none;
+  cursor: default;
+}
+
+.rich-text-editor .ql-editor .ql-keep-html table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rich-text-editor .ql-editor .ql-keep-html td {
+  padding: 8px 12px;
+  vertical-align: top;
+}
 /* Safe area utilities for mobile devices */
 @layer utilities {
   .pb-safe {
