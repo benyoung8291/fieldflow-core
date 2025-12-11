@@ -2,12 +2,13 @@ import { useState, forwardRef, useImperativeHandle, useRef, useEffect } from "re
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Paperclip, Send, X, Minus, Maximize2, Settings2, GripHorizontal } from "lucide-react";
+import { Paperclip, Send, X, Minus, Maximize2, Settings2, GripHorizontal, BookmarkPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { RichTextEditorLazy as RichTextEditor } from "@/components/ui/RichTextEditorLazy";
 import { SnippetInserter } from "./SnippetInserter";
 import { SnippetManager } from "./SnippetManager";
+import { SaveDraftAsSnippetDialog } from "./SaveDraftAsSnippetDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
@@ -46,6 +47,7 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
     const [composerHeight, setComposerHeight] = useState(500);
     const [isDragging, setIsDragging] = useState(false);
     const [snippetManagerOpen, setSnippetManagerOpen] = useState(false);
+    const [saveSnippetDialogOpen, setSaveSnippetDialogOpen] = useState(false);
     const [includeSignature, setIncludeSignature] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const composerRef = useRef<HTMLDivElement>(null);
@@ -458,6 +460,16 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
             </div>
             <div className="flex items-center gap-2">
               <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSaveSnippetDialogOpen(true)}
+                disabled={!body.trim()}
+                title="Save current content as a reusable snippet"
+              >
+                <BookmarkPlus className="h-4 w-4 mr-1" />
+                Save as Snippet
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
@@ -492,6 +504,11 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
         </div>
 
         <SnippetManager open={snippetManagerOpen} onOpenChange={setSnippetManagerOpen} />
+        <SaveDraftAsSnippetDialog 
+          open={saveSnippetDialogOpen} 
+          onOpenChange={setSaveSnippetDialogOpen}
+          content={body}
+        />
       </>
     );
   }
