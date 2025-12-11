@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -563,7 +564,16 @@ ${apt.location_address ? `<div style="font-size:11px;color:#6b7280;margin-bottom
             <div className="border rounded-lg p-4 bg-muted/30">
               <p className="text-sm font-medium mb-3">Preview:</p>
               <div 
-                dangerouslySetInnerHTML={{ __html: previewDialog?.html || "" }}
+                dangerouslySetInnerHTML={{ 
+                  __html: DOMPurify.sanitize(previewDialog?.html || "", {
+                    ALLOWED_TAGS: [
+                      'div', 'span', 'p', 'br', 'strong', 'b', 'em', 'i', 'u',
+                      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                      'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
+                    ],
+                    ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel']
+                  })
+                }}
                 className="prose prose-sm max-w-none [&_table]:border [&_table]:border-border [&_table]:rounded-lg"
               />
             </div>
