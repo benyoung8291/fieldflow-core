@@ -47,7 +47,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#6b7280',
     textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   reportNumberLarge: {
     fontSize: 16,
@@ -102,7 +101,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
     color: '#111827',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   // Info grid styles
   infoGrid: {
@@ -132,7 +130,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
     color: '#6b7280',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
     marginBottom: 4,
   },
   infoValue: {
@@ -261,7 +258,6 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     borderRadius: 4,
     textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   photoLabelAfter: {
     fontSize: 9,
@@ -273,7 +269,6 @@ const styles = StyleSheet.create({
     color: '#16a34a',
     borderRadius: 4,
     textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   photo: {
     width: '100%',
