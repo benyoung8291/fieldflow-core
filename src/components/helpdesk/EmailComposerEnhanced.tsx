@@ -2,7 +2,7 @@ import { useState, forwardRef, useImperativeHandle, useRef, useEffect } from "re
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Paperclip, Send, X, Minus, Maximize2, Settings2 } from "lucide-react";
+import { Paperclip, Send, X, Minus, Maximize2, Settings2, GripHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { RichTextEditorLazy as RichTextEditor } from "@/components/ui/RichTextEditorLazy";
@@ -11,7 +11,6 @@ import { SnippetManager } from "./SnippetManager";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
-
 export interface EmailComposerRef {
   reset: () => void;
   insertContent: (html: string) => void;
@@ -228,11 +227,16 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
             <div
               onMouseDown={handleMouseDown}
               className={cn(
-                "absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-primary/20 transition-colors group",
-                isDragging && "bg-primary/40"
+                "absolute -top-2 left-0 right-0 h-4 cursor-ns-resize hover:bg-primary/10 transition-colors group flex items-center justify-center",
+                isDragging && "bg-primary/20"
               )}
             >
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-border group-hover:bg-primary rounded-full transition-colors" />
+              <div className={cn(
+                "flex items-center gap-1 px-3 py-1 rounded-full bg-muted border transition-all",
+                isDragging ? "bg-primary/20 border-primary" : "group-hover:bg-accent group-hover:border-primary/50"
+              )}>
+                <GripHorizontal className="h-3 w-3 text-muted-foreground group-hover:text-primary" />
+              </div>
             </div>
           )}
 
@@ -262,171 +266,167 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
-            <div className="p-4 space-y-3 flex-1 flex flex-col">
-              {/* Recipients - more compact */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm font-medium w-12 shrink-0">To</Label>
-                  <Input
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                    placeholder="recipient@example.com"
-                    className="flex-1 h-9"
-                  />
-                  <div className="flex items-center gap-1">
-                    {!showCc && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowCc(true)}
-                        className="h-7 text-xs px-2"
-                      >
-                        Cc
-                      </Button>
-                    )}
-                    {!showBcc && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowBcc(true)}
-                        className="h-7 text-xs px-2"
-                      >
-                        Bcc
-                      </Button>
-                    )}
-                  </div>
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Recipients - compact header */}
+            <div className="px-2 py-1 space-y-1 border-b bg-muted/20 shrink-0">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs font-medium w-10 shrink-0 text-muted-foreground">To</Label>
+                <Input
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  placeholder="recipient@example.com"
+                  className="flex-1 h-7 text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
+                />
+                <div className="flex items-center">
+                  {!showCc && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCc(true)}
+                      className="h-6 text-xs px-2"
+                    >
+                      Cc
+                    </Button>
+                  )}
+                  {!showBcc && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowBcc(true)}
+                      className="h-6 text-xs px-2"
+                    >
+                      Bcc
+                    </Button>
+                  )}
                 </div>
-
-                {showCc && (
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium w-12 shrink-0">Cc</Label>
-                    <Input
-                      value={cc}
-                      onChange={(e) => setCc(e.target.value)}
-                      placeholder="cc@example.com"
-                      className="flex-1 h-9"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => {
-                        setShowCc(false);
-                        setCc("");
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-
-                {showBcc && (
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium w-12 shrink-0">Bcc</Label>
-                    <Input
-                      value={bcc}
-                      onChange={(e) => setBcc(e.target.value)}
-                      placeholder="bcc@example.com"
-                      className="flex-1 h-9"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => {
-                        setShowBcc(false);
-                        setBcc("");
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
               </div>
+
+              {showCc && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-medium w-10 shrink-0 text-muted-foreground">Cc</Label>
+                  <Input
+                    value={cc}
+                    onChange={(e) => setCc(e.target.value)}
+                    placeholder="cc@example.com"
+                    className="flex-1 h-7 text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      setShowCc(false);
+                      setCc("");
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+
+              {showBcc && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-medium w-10 shrink-0 text-muted-foreground">Bcc</Label>
+                  <Input
+                    value={bcc}
+                    onChange={(e) => setBcc(e.target.value)}
+                    placeholder="bcc@example.com"
+                    className="flex-1 h-7 text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      setShowBcc(false);
+                      setBcc("");
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
 
               {/* Subject */}
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium w-12 shrink-0">Subject</Label>
+                <Label className="text-xs font-medium w-10 shrink-0 text-muted-foreground">Subject</Label>
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="Enter subject"
-                  className="flex-1 h-9"
+                  className="flex-1 h-7 text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
                 />
               </div>
+            </div>
 
-              {/* Rich Text Editor - larger */}
-              <div className="space-y-2 flex-1 flex flex-col min-h-0">
-                <RichTextEditor
-                  value={body}
-                  onChange={setBody}
-                  placeholder="Write your message..."
-                  className={cn(
-                    "flex-1",
-                    isFullscreen ? "min-h-[60vh]" : "min-h-[280px]"
-                  )}
-                />
-              </div>
+            {/* Rich Text Editor - full height */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <RichTextEditor
+                value={body}
+                onChange={setBody}
+                placeholder="Write your message..."
+                className="flex-1 h-full [&_.ql-toolbar]:rounded-none [&_.ql-toolbar]:border-x-0 [&_.ql-container]:rounded-none [&_.ql-container]:border-x-0 [&_.ql-container]:border-b-0"
+              />
+            </div>
 
-              {/* Signature Preview */}
-              {userProfile?.email_signature && includeSignature && (
-                <div className="border-t pt-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">Signature</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={() => setIncludeSignature(false)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                  <div 
-                    className="text-sm text-muted-foreground pl-2 border-l-2 border-muted"
-                    dangerouslySetInnerHTML={{ __html: getRenderedSignature() }}
-                  />
+            {/* Signature Preview - compact */}
+            {userProfile?.email_signature && includeSignature && (
+              <div className="px-2 py-1 border-t bg-muted/20 shrink-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Signature</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 text-[10px] px-1"
+                    onClick={() => setIncludeSignature(false)}
+                  >
+                    Remove
+                  </Button>
                 </div>
-              )}
+                <div 
+                  className="text-xs text-muted-foreground pl-2 border-l border-muted max-h-16 overflow-y-auto"
+                  dangerouslySetInnerHTML={{ __html: getRenderedSignature() }}
+                />
+              </div>
+            )}
 
-              {!includeSignature && userProfile?.email_signature && (
+            {!includeSignature && userProfile?.email_signature && (
+              <div className="px-2 py-1 border-t bg-muted/20 shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="self-start h-7 text-xs"
+                  className="h-5 text-[10px]"
                   onClick={() => setIncludeSignature(true)}
                 >
                   + Add Signature
                 </Button>
-              )}
+              </div>
+            )}
 
-              {/* Attachments */}
-              {attachments.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Attachments</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {attachments.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg border text-sm"
+            {/* Attachments */}
+            {attachments.length > 0 && (
+              <div className="px-2 py-1 border-t bg-muted/20 shrink-0">
+                <div className="flex flex-wrap gap-1">
+                  {attachments.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 px-2 py-0.5 bg-background rounded border text-xs"
+                    >
+                      <Paperclip className="h-3 w-3 text-muted-foreground" />
+                      <span className="max-w-[120px] truncate">{file.name}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => removeAttachment(index)}
                       >
-                        <Paperclip className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs">{file.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => removeAttachment(index)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                        <X className="h-2.5 w-2.5" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Footer Actions */}
