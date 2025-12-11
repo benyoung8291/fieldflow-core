@@ -19,10 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
 import FieldReportDialog from '@/components/field-reports/FieldReportDialog';
 import { ContractorMappingDialog } from '@/components/field-reports/ContractorMappingDialog';
 import { QuickMappingPanel } from '@/components/field-reports/QuickMappingPanel';
 import { FieldReportPDFDocument } from '@/components/field-reports/FieldReportPDFDocument';
+import { FieldReportPDFPreview } from '@/components/field-reports/FieldReportPDFPreview';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionButton } from '@/components/permissions/PermissionButton';
 import { pdf } from '@react-pdf/renderer';
@@ -406,285 +412,305 @@ export default function FieldReports() {
             </div>
           </div>
 
-          {/* Right Panel - Report Details or Quick Mapping */}
-          <div className="flex-1 overflow-y-auto">
-            {!selectedReport ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
-                <div className="text-center space-y-2">
-                  <FileText className="h-12 w-12 mx-auto opacity-20" />
-                  <p>Select a report to view details</p>
-                </div>
-              </div>
-            ) : selectedReportNeedsMapping ? (
-              // Quick Mapping Panel for reports needing mapping
-              <div className="p-6 max-w-xl mx-auto">
-                <QuickMappingPanel
-                  report={{
-                    id: selectedReport.id,
-                    report_number: selectedReport.report_number,
-                    manual_location_entry: selectedReport.manual_location_entry,
-                    contractor_phone: selectedReport.contractor_phone,
-                    contractor_name: selectedReport.contractor_name,
-                    service_date: selectedReport.service_date,
-                  }}
-                  onMapped={handleMappingComplete}
-                  onNext={handleSkipToNext}
-                  hasNext={reportsNeedingMapping.length > 1}
-                />
-              </div>
-            ) : (
-              // Regular Report Details
-              <div className="p-6 max-w-4xl mx-auto space-y-6">
-                {/* Header Actions */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold">{selectedReport.report_number}</h1>
-                    <p className="text-muted-foreground">
-                      {format(new Date(selectedReport.service_date), 'MMMM dd, yyyy')}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {selectedReport.status !== 'approved' && (
-                      <PermissionButton 
-                        module="field_reports" 
-                        permission="edit"
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setEditMode(!editMode)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        {editMode ? 'View' : 'Edit'}
-                      </PermissionButton>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleGeneratePDF}
-                      disabled={generatingPDF}
-                    >
-                      {generatingPDF ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download PDF
-                        </>
-                      )}
-                    </Button>
-                    {selectedReport.status === 'approved' ? (
-                      <PermissionButton 
-                        module="field_reports" 
-                        permission="edit"
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleUnapproveReport}
-                      >
-                        Unapprove Report
-                      </PermissionButton>
-                    ) : (
-                      <PermissionButton 
-                        module="field_reports" 
-                        permission="edit"
-                        size="sm" 
-                        onClick={handleApproveReport}
-                      >
-                        Approve Report
-                      </PermissionButton>
-                    )}
-                  </div>
-                </div>
-
-                {/* Report Content */}
-                <Card>
-                  <CardContent className="p-6 space-y-6">
-                    {/* Basic Info */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground">Worker</Label>
-                        <p className="font-medium">{selectedReport.worker_name}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Customer</Label>
-                        <p className="font-medium">{selectedReport.customer?.name}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Location</Label>
-                        <p className="text-sm">{selectedReport.location?.address}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Arrival Time</Label>
-                        <p className="font-medium">{selectedReport.arrival_time}</p>
-                      </div>
+          {/* Right Panel - Report Details + PDF Preview */}
+          <ResizablePanelGroup direction="horizontal" className="flex-1">
+            <ResizablePanel defaultSize={60} minSize={35}>
+              <div className="h-full overflow-y-auto">
+                {!selectedReport ? (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-center space-y-2">
+                      <FileText className="h-12 w-12 mx-auto opacity-20" />
+                      <p>Select a report to view details</p>
                     </div>
-
-                    {/* Condition Ratings */}
-                    <div className="space-y-3 border-t pt-4">
-                      <h3 className="font-semibold">Condition on Arrival</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-muted-foreground">Carpet Condition</Label>
-                          <p className="text-2xl font-bold">{selectedReport.carpet_condition_arrival}/5</p>
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground">Hard Floor Condition</Label>
-                          <p className="text-2xl font-bold">{selectedReport.hard_floor_condition_arrival}/5</p>
-                        </div>
+                  </div>
+                ) : selectedReportNeedsMapping ? (
+                  // Quick Mapping Panel for reports needing mapping
+                  <div className="p-6 max-w-xl mx-auto">
+                    <QuickMappingPanel
+                      report={{
+                        id: selectedReport.id,
+                        report_number: selectedReport.report_number,
+                        manual_location_entry: selectedReport.manual_location_entry,
+                        contractor_phone: selectedReport.contractor_phone,
+                        contractor_name: selectedReport.contractor_name,
+                        service_date: selectedReport.service_date,
+                      }}
+                      onMapped={handleMappingComplete}
+                      onNext={handleSkipToNext}
+                      hasNext={reportsNeedingMapping.length > 1}
+                    />
+                  </div>
+                ) : (
+                  // Regular Report Details
+                  <div className="p-6 max-w-4xl mx-auto space-y-6">
+                    {/* Header Actions */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h1 className="text-2xl font-bold">{selectedReport.report_number}</h1>
+                        <p className="text-muted-foreground">
+                          {format(new Date(selectedReport.service_date), 'MMMM dd, yyyy')}
+                        </p>
                       </div>
-                      {selectedReport.flooring_state_description && (
-                        <div>
-                          <Label className="text-muted-foreground">Overall State</Label>
-                          {editMode ? (
-                            <Textarea value={selectedReport.flooring_state_description} rows={3} />
+                      <div className="flex gap-2">
+                        {selectedReport.status !== 'approved' && (
+                          <PermissionButton 
+                            module="field_reports" 
+                            permission="edit"
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setEditMode(!editMode)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            {editMode ? 'View' : 'Edit'}
+                          </PermissionButton>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleGeneratePDF}
+                          disabled={generatingPDF}
+                        >
+                          {generatingPDF ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Generating...
+                            </>
                           ) : (
-                            <p className="text-sm">{selectedReport.flooring_state_description}</p>
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download PDF
+                            </>
                           )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Work Description */}
-                    <div className="space-y-3 border-t pt-4">
-                      <h3 className="font-semibold">Work Completed</h3>
-                      {editMode ? (
-                        <Textarea value={selectedReport.work_description} rows={4} />
-                      ) : (
-                        <p className="text-sm whitespace-pre-wrap">{selectedReport.work_description}</p>
-                      )}
-                    </div>
-
-                    {selectedReport.internal_notes && (
-                      <div className="space-y-3 border-t pt-4">
-                        <h3 className="font-semibold flex items-center gap-2">
-                          Internal Notes
-                          <Badge variant="secondary" className="text-xs">Internal Only</Badge>
-                        </h3>
-                        {editMode ? (
-                          <Textarea value={selectedReport.internal_notes} rows={3} />
+                        </Button>
+                        {selectedReport.status === 'approved' ? (
+                          <PermissionButton 
+                            module="field_reports" 
+                            permission="edit"
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleUnapproveReport}
+                          >
+                            Unapprove Report
+                          </PermissionButton>
                         ) : (
-                          <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded">
-                            {selectedReport.internal_notes}
-                          </p>
+                          <PermissionButton 
+                            module="field_reports" 
+                            permission="edit"
+                            size="sm" 
+                            onClick={handleApproveReport}
+                          >
+                            Approve Report
+                          </PermissionButton>
                         )}
                       </div>
-                    )}
+                    </div>
 
-                    {/* Photos */}
-                    {selectedReport.photos && selectedReport.photos.length > 0 && (
-                      <div className="space-y-4 border-t pt-4">
-                        <h3 className="font-semibold">Photos</h3>
-                        
-                        {/* Before/After Pairs */}
-                        {beforePhotos.length > 0 && (
-                          <div className="space-y-2">
-                            <Label>Before & After</Label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {beforePhotos.map((beforePhoto: any) => {
-                                const pairedAfter = afterPhotos.find((a: any) => 
-                                  a.id === beforePhoto.paired_photo_id || a.paired_photo_id === beforePhoto.id
-                                );
-                                return (
-                                  <div key={beforePhoto.id} className="grid grid-cols-2 gap-2">
-                                    <div className="relative">
-                                      <img 
-                                        src={beforePhoto.file_url} 
-                                        alt="Before" 
-                                        className="w-full h-48 object-cover rounded"
-                                      />
-                                      <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                                        Before
-                                      </div>
-                                    </div>
-                                    {pairedAfter && (
-                                      <div className="relative">
-                                        <img 
-                                          src={pairedAfter.file_url} 
-                                          alt="After" 
-                                          className="w-full h-48 object-cover rounded"
-                                        />
-                                        <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
-                                          After
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Other Photos */}
-                        {selectedReport.photos.filter((p: any) => !['before', 'after'].includes(p.photo_type)).length > 0 && (
-                          <div className="space-y-2">
-                            <Label>Additional Photos</Label>
-                            <div className="grid grid-cols-3 gap-2">
-                              {selectedReport.photos
-                                .filter((p: any) => !['before', 'after'].includes(p.photo_type))
-                                .map((photo: any) => (
-                                  <img 
-                                    key={photo.id}
-                                    src={photo.file_url} 
-                                    alt={photo.photo_type} 
-                                    className="w-full h-32 object-cover rounded"
-                                  />
-                                ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Problem Areas */}
-                    {selectedReport.had_problem_areas && (
-                      <div className="space-y-3 border-t pt-4">
-                        <h3 className="font-semibold text-amber-600">Problem Areas</h3>
-                        <div className="space-y-2">
+                    {/* Report Content */}
+                    <Card>
+                      <CardContent className="p-6 space-y-6">
+                        {/* Basic Info */}
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-muted-foreground">Description</Label>
-                            <p className="text-sm">{selectedReport.problem_areas_description}</p>
+                            <Label className="text-muted-foreground">Worker</Label>
+                            <p className="font-medium">{selectedReport.worker_name}</p>
                           </div>
-                          {selectedReport.methods_attempted && (
+                          <div>
+                            <Label className="text-muted-foreground">Customer</Label>
+                            <p className="font-medium">{selectedReport.customer?.name}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Location</Label>
+                            <p className="text-sm">{selectedReport.location?.address}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Arrival Time</Label>
+                            <p className="font-medium">{selectedReport.arrival_time}</p>
+                          </div>
+                        </div>
+
+                        {/* Condition Ratings */}
+                        <div className="space-y-3 border-t pt-4">
+                          <h3 className="font-semibold">Condition on Arrival</h3>
+                          <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label className="text-muted-foreground">Methods Attempted</Label>
-                              <p className="text-sm">{selectedReport.methods_attempted}</p>
+                              <Label className="text-muted-foreground">Carpet Condition</Label>
+                              <p className="text-2xl font-bold">{selectedReport.carpet_condition_arrival}/5</p>
+                            </div>
+                            <div>
+                              <Label className="text-muted-foreground">Hard Floor Condition</Label>
+                              <p className="text-2xl font-bold">{selectedReport.hard_floor_condition_arrival}/5</p>
+                            </div>
+                          </div>
+                          {selectedReport.flooring_state_description && (
+                            <div>
+                              <Label className="text-muted-foreground">Overall State</Label>
+                              {editMode ? (
+                                <Textarea value={selectedReport.flooring_state_description} rows={3} />
+                              ) : (
+                                <p className="text-sm">{selectedReport.flooring_state_description}</p>
+                              )}
                             </div>
                           )}
                         </div>
-                      </div>
-                    )}
 
-                    {/* Incidents */}
-                    {selectedReport.had_incident && (
-                      <div className="space-y-3 border-t pt-4">
-                        <h3 className="font-semibold text-red-600">Incident Report</h3>
-                        <p className="text-sm">{selectedReport.incident_description}</p>
-                      </div>
-                    )}
+                        {/* Work Description */}
+                        <div className="space-y-3 border-t pt-4">
+                          <h3 className="font-semibold">Work Completed</h3>
+                          {editMode ? (
+                            <Textarea value={selectedReport.work_description} rows={4} />
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap">{selectedReport.work_description}</p>
+                          )}
+                        </div>
 
-                    {/* Customer Signature */}
-                    {selectedReport.customer_signature_data && (
-                      <div className="space-y-3 border-t pt-4">
-                        <h3 className="font-semibold">Customer Signature</h3>
-                        <img 
-                          src={selectedReport.customer_signature_data} 
-                          alt="Customer Signature" 
-                          className="border rounded h-32 bg-white"
-                        />
-                        {selectedReport.customer_signature_name && (
-                          <p className="text-sm text-muted-foreground">
-                            Signed by: {selectedReport.customer_signature_name}
-                          </p>
+                        {selectedReport.internal_notes && (
+                          <div className="space-y-3 border-t pt-4">
+                            <h3 className="font-semibold flex items-center gap-2">
+                              Internal Notes
+                              <Badge variant="secondary" className="text-xs">Internal Only</Badge>
+                            </h3>
+                            {editMode ? (
+                              <Textarea value={selectedReport.internal_notes} rows={3} />
+                            ) : (
+                              <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded">
+                                {selectedReport.internal_notes}
+                              </p>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+
+                        {/* Photos */}
+                        {selectedReport.photos && selectedReport.photos.length > 0 && (
+                          <div className="space-y-4 border-t pt-4">
+                            <h3 className="font-semibold">Photos</h3>
+                            
+                            {/* Before/After Pairs */}
+                            {beforePhotos.length > 0 && (
+                              <div className="space-y-2">
+                                <Label>Before & After</Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {beforePhotos.map((beforePhoto: any) => {
+                                    const pairedAfter = afterPhotos.find((a: any) => 
+                                      a.id === beforePhoto.paired_photo_id || a.paired_photo_id === beforePhoto.id
+                                    );
+                                    return (
+                                      <div key={beforePhoto.id} className="grid grid-cols-2 gap-2">
+                                        <div className="relative">
+                                          <img 
+                                            src={beforePhoto.file_url} 
+                                            alt="Before" 
+                                            className="w-full h-48 object-cover rounded"
+                                          />
+                                          <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                            Before
+                                          </div>
+                                        </div>
+                                        {pairedAfter && (
+                                          <div className="relative">
+                                            <img 
+                                              src={pairedAfter.file_url} 
+                                              alt="After" 
+                                              className="w-full h-48 object-cover rounded"
+                                            />
+                                            <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                              After
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Other Photos */}
+                            {selectedReport.photos.filter((p: any) => !['before', 'after'].includes(p.photo_type)).length > 0 && (
+                              <div className="space-y-2">
+                                <Label>Additional Photos</Label>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {selectedReport.photos
+                                    .filter((p: any) => !['before', 'after'].includes(p.photo_type))
+                                    .map((photo: any) => (
+                                      <img 
+                                        key={photo.id}
+                                        src={photo.file_url} 
+                                        alt={photo.photo_type} 
+                                        className="w-full h-32 object-cover rounded"
+                                      />
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Problem Areas */}
+                        {selectedReport.had_problem_areas && (
+                          <div className="space-y-3 border-t pt-4">
+                            <h3 className="font-semibold text-amber-600">Problem Areas</h3>
+                            <div className="space-y-2">
+                              <div>
+                                <Label className="text-muted-foreground">Description</Label>
+                                <p className="text-sm">{selectedReport.problem_areas_description}</p>
+                              </div>
+                              {selectedReport.methods_attempted && (
+                                <div>
+                                  <Label className="text-muted-foreground">Methods Attempted</Label>
+                                  <p className="text-sm">{selectedReport.methods_attempted}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Incidents */}
+                        {selectedReport.had_incident && (
+                          <div className="space-y-3 border-t pt-4">
+                            <h3 className="font-semibold text-red-600">Incident Report</h3>
+                            <p className="text-sm">{selectedReport.incident_description}</p>
+                          </div>
+                        )}
+
+                        {/* Customer Signature */}
+                        {selectedReport.customer_signature_data && (
+                          <div className="space-y-3 border-t pt-4">
+                            <h3 className="font-semibold">Customer Signature</h3>
+                            <img 
+                              src={selectedReport.customer_signature_data} 
+                              alt="Customer Signature" 
+                              className="border rounded h-32 bg-white"
+                            />
+                            {selectedReport.customer_signature_name && (
+                              <p className="text-sm text-muted-foreground">
+                                Signed by: {selectedReport.customer_signature_name}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </ResizablePanel>
+            
+            <ResizableHandle withHandle />
+            
+            {/* PDF Preview Panel */}
+            <ResizablePanel defaultSize={40} minSize={25} className="hidden lg:block">
+              <FieldReportPDFPreview
+                report={selectedReport}
+                companySettings={tenantSettings ? {
+                  name: tenantSettings.company_name || 'Company',
+                  logo_url: tenantSettings.logo_url,
+                  address: null,
+                  phone: tenantSettings.company_phone,
+                  email: tenantSettings.company_email,
+                } : null}
+              />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </div>
 
