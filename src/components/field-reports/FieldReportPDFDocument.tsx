@@ -21,208 +21,408 @@ Font.register({
 const styles = StyleSheet.create({
   page: {
     padding: 40,
+    paddingBottom: 60,
     fontFamily: 'Inter',
     fontSize: 10,
     color: '#1a1a1a',
+    backgroundColor: '#ffffff',
   },
+  // Header styles
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 30,
-    paddingBottom: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: '#e5e7eb',
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 3,
+    borderBottomColor: '#3b82f6',
+  },
+  logoContainer: {
+    flex: 1,
   },
   logo: {
-    width: 120,
-    height: 60,
+    width: 140,
+    height: 50,
     objectFit: 'contain',
   },
-  companyInfo: {
-    textAlign: 'right',
+  textLogo: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: '#3b82f6',
+  },
+  headerRight: {
+    alignItems: 'flex-end',
     maxWidth: 200,
   },
-  companyName: {
-    fontSize: 14,
-    fontWeight: 700,
-    marginBottom: 4,
-  },
-  companyDetail: {
-    fontSize: 8,
+  reportLabel: {
+    fontSize: 9,
     color: '#6b7280',
-    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  reportTitle: {
-    fontSize: 24,
+  reportNumberLarge: {
+    fontSize: 16,
     fontWeight: 700,
-    textAlign: 'center',
-    marginBottom: 8,
     color: '#111827',
+    marginTop: 2,
   },
-  reportNumber: {
-    fontSize: 12,
+  reportDateHeader: {
+    fontSize: 10,
+    color: '#374151',
+    marginTop: 4,
+  },
+  // Title section
+  titleSection: {
     textAlign: 'center',
-    color: '#6b7280',
+    marginBottom: 24,
+    paddingVertical: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+  },
+  mainTitle: {
+    fontSize: 22,
+    fontWeight: 700,
+    color: '#111827',
     marginBottom: 4,
   },
-  reportDate: {
-    fontSize: 10,
-    textAlign: 'center',
-    color: '#9ca3af',
-    marginBottom: 30,
+  subtitle: {
+    fontSize: 11,
+    color: '#6b7280',
   },
+  // Section styles
   section: {
     marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: 600,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
+    paddingBottom: 8,
+    borderBottomWidth: 2,
     borderBottomColor: '#e5e7eb',
-    color: '#374151',
   },
+  sectionIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+    backgroundColor: '#3b82f6',
+    borderRadius: 4,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: '#111827',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  // Info grid styles
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -8,
+    marginHorizontal: -6,
   },
   infoItem: {
     width: '50%',
-    paddingHorizontal: 8,
-    marginBottom: 12,
+    paddingHorizontal: 6,
+    marginBottom: 14,
+  },
+  infoItemFull: {
+    width: '100%',
+    paddingHorizontal: 6,
+    marginBottom: 14,
+  },
+  infoBox: {
+    backgroundColor: '#f9fafb',
+    padding: 12,
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3b82f6',
   },
   infoLabel: {
     fontSize: 8,
     fontWeight: 600,
     color: '#6b7280',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   infoValue: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#1f2937',
+    lineHeight: 1.5,
   },
-  conditionBox: {
-    backgroundColor: '#f9fafb',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
+  infoValueLarge: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#111827',
   },
-  conditionRating: {
+  // Condition rating styles
+  conditionGrid: {
     flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  conditionCard: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+    padding: 14,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   conditionLabel: {
-    fontSize: 10,
-    color: '#374151',
-  },
-  conditionValue: {
-    fontSize: 16,
-    fontWeight: 700,
-    color: '#111827',
+    fontSize: 9,
+    fontWeight: 600,
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
   starsContainer: {
     flexDirection: 'row',
-    gap: 2,
+    marginBottom: 4,
   },
   star: {
-    fontSize: 12,
+    fontSize: 16,
+    color: '#fbbf24',
   },
-  workDescription: {
-    backgroundColor: '#f9fafb',
+  starEmpty: {
+    fontSize: 16,
+    color: '#d1d5db',
+  },
+  conditionScore: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#111827',
+    marginTop: 4,
+  },
+  // Work description styles
+  workBox: {
+    backgroundColor: '#f0fdf4',
     padding: 16,
-    borderRadius: 6,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#22c55e',
+  },
+  workText: {
+    fontSize: 11,
+    color: '#166534',
     lineHeight: 1.6,
   },
-  photoSection: {
-    marginTop: 10,
-  },
-  photoPair: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    gap: 12,
-  },
-  photoContainer: {
-    flex: 1,
-  },
-  photoLabel: {
-    fontSize: 8,
-    fontWeight: 600,
-    textAlign: 'center',
-    paddingVertical: 4,
-    marginBottom: 6,
-    borderRadius: 4,
-  },
-  beforeLabel: {
-    backgroundColor: '#fef2f2',
-    color: '#dc2626',
-  },
-  afterLabel: {
-    backgroundColor: '#f0fdf4',
-    color: '#16a34a',
-  },
-  photo: {
-    width: '100%',
-    height: 180,
-    objectFit: 'cover',
-    borderRadius: 4,
-    border: '1px solid #e5e7eb',
-  },
-  problemSection: {
+  // Problem area styles
+  problemBox: {
     backgroundColor: '#fffbeb',
     padding: 16,
-    borderRadius: 6,
+    borderRadius: 8,
     borderLeftWidth: 4,
     borderLeftColor: '#f59e0b',
   },
   problemTitle: {
     fontSize: 11,
-    fontWeight: 600,
+    fontWeight: 700,
     color: '#92400e',
     marginBottom: 8,
   },
-  signatureSection: {
-    marginTop: 30,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+  problemText: {
+    fontSize: 10,
+    color: '#78350f',
+    lineHeight: 1.5,
+  },
+  problemMethodsLabel: {
+    fontSize: 9,
+    fontWeight: 600,
+    color: '#92400e',
+    textTransform: 'uppercase',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  // Photo styles
+  photoPageTitle: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: '#3b82f6',
+  },
+  photoPairContainer: {
+    marginBottom: 20,
+  },
+  photoPairHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  photoPair: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  photoWrapper: {
+    flex: 1,
+  },
+  photoLabelBefore: {
+    fontSize: 9,
+    fontWeight: 700,
+    textAlign: 'center',
+    paddingVertical: 6,
+    marginBottom: 6,
+    backgroundColor: '#fef2f2',
+    color: '#dc2626',
+    borderRadius: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  photoLabelAfter: {
+    fontSize: 9,
+    fontWeight: 700,
+    textAlign: 'center',
+    paddingVertical: 6,
+    marginBottom: 6,
+    backgroundColor: '#f0fdf4',
+    color: '#16a34a',
+    borderRadius: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  photo: {
+    width: '100%',
+    height: 200,
+    objectFit: 'cover',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  photoCaption: {
+    fontSize: 8,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  noPhotoPlaceholder: {
+    flex: 1,
+    height: 200,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  noPhotoText: {
+    fontSize: 9,
+    color: '#9ca3af',
+  },
+  // Additional photos section
+  additionalPhotosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  additionalPhotoWrapper: {
+    width: '48%',
+  },
+  additionalPhotoLabel: {
+    fontSize: 9,
+    fontWeight: 600,
+    textAlign: 'center',
+    paddingVertical: 4,
+    marginBottom: 4,
+    backgroundColor: '#f3f4f6',
+    color: '#6b7280',
+    borderRadius: 4,
+    textTransform: 'uppercase',
+  },
+  additionalPhoto: {
+    width: '100%',
+    height: 150,
+    objectFit: 'cover',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  // Signature styles
+  signatureSection: {
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 2,
+    borderTopColor: '#e5e7eb',
+  },
+  signatureTitle: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#111827',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  signatureBox: {
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    padding: 16,
+    borderRadius: 8,
+  },
   signatureImage: {
-    width: 200,
+    width: 220,
     height: 80,
     objectFit: 'contain',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 4,
-    padding: 8,
+    borderRadius: 6,
   },
   signatureName: {
     fontSize: 10,
-    color: '#6b7280',
-    marginTop: 8,
+    color: '#374151',
+    marginTop: 10,
   },
+  signatureDate: {
+    fontSize: 9,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  // Footer styles
   footer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 25,
     left: 40,
     right: 40,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     fontSize: 8,
     color: '#9ca3af',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
     paddingTop: 10,
   },
+  pageNumber: {
+    fontSize: 8,
+    color: '#6b7280',
+  },
+  // Contractor info banner
+  contractorBanner: {
+    backgroundColor: '#eff6ff',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  contractorLabel: {
+    fontSize: 9,
+    color: '#1e40af',
+  },
+  contractorValue: {
+    fontSize: 9,
+    fontWeight: 600,
+    color: '#1e40af',
+  },
 });
 
-interface CompanySettings {
+export interface CompanySettings {
   name: string;
   logo_url?: string | null;
   address?: string | null;
@@ -230,7 +430,7 @@ interface CompanySettings {
   email?: string | null;
 }
 
-interface FieldReportPhoto {
+export interface FieldReportPhoto {
   id: string;
   file_url: string;
   photo_type: 'before' | 'after' | 'problem' | 'other';
@@ -238,11 +438,14 @@ interface FieldReportPhoto {
   caption?: string | null;
 }
 
-interface FieldReportData {
+export interface FieldReportData {
   report_number: string;
   service_date: string;
   arrival_time?: string | null;
-  worker_name: string;
+  worker_name?: string | null;
+  contractor_name?: string | null;
+  contractor_phone?: string | null;
+  manual_location_entry?: string | null;
   customer?: { name: string } | null;
   location?: { name: string; address?: string | null } | null;
   carpet_condition_arrival?: number | null;
@@ -257,134 +460,236 @@ interface FieldReportData {
   photos?: FieldReportPhoto[];
 }
 
-interface FieldReportPDFDocumentProps {
+export interface FieldReportPDFDocumentProps {
   report: FieldReportData;
   companySettings: CompanySettings;
 }
 
+// Helper function to format time
+const formatTime = (timeStr: string | null | undefined): string => {
+  if (!timeStr) return 'Not recorded';
+  
+  // Handle HH:MM:SS format
+  const parts = timeStr.split(':');
+  if (parts.length >= 2) {
+    const hours = parseInt(parts[0], 10);
+    const minutes = parts[1];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  }
+  return timeStr;
+};
+
+// Helper function to format date
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-AU', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+// Helper function to clean report number
+const cleanReportNumber = (num: string): string => {
+  // Remove DRAFT- prefix for customer-facing PDF
+  return num.replace(/^FR-DRAFT-/, 'FR-').replace(/^DRAFT-/, '');
+};
+
+// Helper function to render stars
 const renderStars = (rating: number | null | undefined) => {
   const value = rating || 0;
   const stars = [];
   for (let i = 1; i <= 5; i++) {
     stars.push(
-      <Text key={i} style={styles.star}>
-        {i <= value ? '★' : '☆'}
+      <Text key={i} style={i <= value ? styles.star : styles.starEmpty}>
+        ★
       </Text>
     );
   }
   return <View style={styles.starsContainer}>{stars}</View>;
 };
 
+// Helper to get customer display name
+const getCustomerName = (report: FieldReportData): string => {
+  if (report.customer?.name) return report.customer.name;
+  if (report.manual_location_entry) {
+    // Try to extract customer name from manual entry
+    const parts = report.manual_location_entry.split(/[\/\-,]/);
+    return parts[0]?.trim() || report.manual_location_entry;
+  }
+  return 'Not specified';
+};
+
+// Helper to get location display
+const getLocationDisplay = (report: FieldReportData): string => {
+  if (report.location?.name && report.location?.address) {
+    return `${report.location.name}\n${report.location.address}`;
+  }
+  if (report.location?.name) return report.location.name;
+  if (report.location?.address) return report.location.address;
+  if (report.manual_location_entry) {
+    // Try to extract location from manual entry
+    const parts = report.manual_location_entry.split(/[\/\-]/);
+    return parts.length > 1 ? parts.slice(1).join(' - ').trim() : report.manual_location_entry;
+  }
+  return 'Not specified';
+};
+
+// Helper to get worker/service provider name
+const getServiceProvider = (report: FieldReportData): string => {
+  return report.worker_name || report.contractor_name || 'Not specified';
+};
+
 export function FieldReportPDFDocument({ report, companySettings }: FieldReportPDFDocumentProps) {
+  // Separate photos by type
   const beforePhotos = report.photos?.filter(p => p.photo_type === 'before') || [];
   const afterPhotos = report.photos?.filter(p => p.photo_type === 'after') || [];
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-AU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  const problemPhotos = report.photos?.filter(p => p.photo_type === 'problem') || [];
+  const otherPhotos = report.photos?.filter(p => p.photo_type === 'other') || [];
+  
+  // Create photo pairs with improved bidirectional matching
+  const usedAfterIds = new Set<string>();
+  const photoPairs: { before: FieldReportPhoto; after?: FieldReportPhoto }[] = [];
+  
+  beforePhotos.forEach(beforePhoto => {
+    // Try to find matching after photo
+    let matchingAfter = afterPhotos.find(
+      a => !usedAfterIds.has(a.id) && 
+           (a.id === beforePhoto.paired_photo_id || a.paired_photo_id === beforePhoto.id)
+    );
+    
+    // If no explicit pairing, try to match by index/position
+    if (!matchingAfter) {
+      const availableAfter = afterPhotos.find(a => !usedAfterIds.has(a.id));
+      if (availableAfter) {
+        matchingAfter = availableAfter;
+      }
+    }
+    
+    if (matchingAfter) {
+      usedAfterIds.add(matchingAfter.id);
+    }
+    
+    photoPairs.push({ before: beforePhoto, after: matchingAfter });
+  });
+  
+  // Get any unpaired after photos
+  const unpairedAfterPhotos = afterPhotos.filter(a => !usedAfterIds.has(a.id));
+  
+  // Combine additional photos
+  const additionalPhotos = [...problemPhotos, ...otherPhotos, ...unpairedAfterPhotos];
+  
+  // Check if we have photos to display
+  const hasPhotoPairs = photoPairs.length > 0;
+  const hasAdditionalPhotos = additionalPhotos.length > 0;
+  const hasAnyPhotos = hasPhotoPairs || hasAdditionalPhotos;
+  
+  // Check if this was a contractor submission
+  const isContractorSubmission = !report.worker_name && report.contractor_name;
 
   return (
     <Document>
+      {/* Page 1: Report Details */}
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            {companySettings.logo_url && (
+          <View style={styles.logoContainer}>
+            {companySettings.logo_url ? (
               <Image src={companySettings.logo_url} style={styles.logo} />
+            ) : (
+              <Text style={styles.textLogo}>{companySettings.name}</Text>
             )}
           </View>
-          <View style={styles.companyInfo}>
-            <Text style={styles.companyName}>{companySettings.name}</Text>
-            {companySettings.address && (
-              <Text style={styles.companyDetail}>{companySettings.address}</Text>
-            )}
-            {companySettings.phone && (
-              <Text style={styles.companyDetail}>{companySettings.phone}</Text>
-            )}
-            {companySettings.email && (
-              <Text style={styles.companyDetail}>{companySettings.email}</Text>
-            )}
+          <View style={styles.headerRight}>
+            <Text style={styles.reportLabel}>Service Report</Text>
+            <Text style={styles.reportNumberLarge}>{cleanReportNumber(report.report_number)}</Text>
+            <Text style={styles.reportDateHeader}>{formatDate(report.service_date)}</Text>
           </View>
         </View>
 
-        {/* Title */}
-        <Text style={styles.reportTitle}>Service Report</Text>
-        <Text style={styles.reportNumber}>{report.report_number}</Text>
-        <Text style={styles.reportDate}>{formatDate(report.service_date)}</Text>
+        {/* Title Section */}
+        <View style={styles.titleSection}>
+          <Text style={styles.mainTitle}>Field Service Report</Text>
+          <Text style={styles.subtitle}>
+            Completed by {getServiceProvider(report)}
+          </Text>
+        </View>
+
+        {/* Contractor Banner (if applicable) */}
+        {isContractorSubmission && (
+          <View style={styles.contractorBanner}>
+            <Text style={styles.contractorLabel}>Submitted by contractor: </Text>
+            <Text style={styles.contractorValue}>{report.contractor_name}</Text>
+          </View>
+        )}
 
         {/* Service Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service Information</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Service Information</Text>
+          </View>
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Customer</Text>
-              <Text style={styles.infoValue}>{report.customer?.name || 'N/A'}</Text>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoLabel}>Customer</Text>
+                <Text style={styles.infoValueLarge}>{getCustomerName(report)}</Text>
+              </View>
             </View>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>
-                {report.location?.name || 'N/A'}
-                {report.location?.address && `\n${report.location.address}`}
-              </Text>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoLabel}>Arrival Time</Text>
+                <Text style={styles.infoValueLarge}>{formatTime(report.arrival_time)}</Text>
+              </View>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Service Provider</Text>
-              <Text style={styles.infoValue}>{report.worker_name}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Time of Attendance</Text>
-              <Text style={styles.infoValue}>{report.arrival_time || 'N/A'}</Text>
+            <View style={styles.infoItemFull}>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoLabel}>Service Location</Text>
+                <Text style={styles.infoValue}>{getLocationDisplay(report)}</Text>
+              </View>
             </View>
           </View>
         </View>
 
         {/* Condition on Arrival */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Condition on Arrival</Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={[styles.conditionBox, { flex: 1 }]}>
-              <View style={styles.conditionRating}>
-                <Text style={styles.conditionLabel}>Carpet Condition</Text>
-                <View style={{ alignItems: 'flex-end' }}>
-                  {renderStars(report.carpet_condition_arrival)}
-                  <Text style={styles.conditionValue}>
-                    {report.carpet_condition_arrival || 'N/A'}/5
-                  </Text>
-                </View>
-              </View>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Condition on Arrival</Text>
+          </View>
+          <View style={styles.conditionGrid}>
+            <View style={styles.conditionCard}>
+              <Text style={styles.conditionLabel}>Carpet Condition</Text>
+              {renderStars(report.carpet_condition_arrival)}
+              <Text style={styles.conditionScore}>
+                {report.carpet_condition_arrival ? `${report.carpet_condition_arrival}/5` : 'N/A'}
+              </Text>
             </View>
-            <View style={[styles.conditionBox, { flex: 1 }]}>
-              <View style={styles.conditionRating}>
-                <Text style={styles.conditionLabel}>Hard Floor Condition</Text>
-                <View style={{ alignItems: 'flex-end' }}>
-                  {renderStars(report.hard_floor_condition_arrival)}
-                  <Text style={styles.conditionValue}>
-                    {report.hard_floor_condition_arrival || 'N/A'}/5
-                  </Text>
-                </View>
-              </View>
+            <View style={styles.conditionCard}>
+              <Text style={styles.conditionLabel}>Hard Floor Condition</Text>
+              {renderStars(report.hard_floor_condition_arrival)}
+              <Text style={styles.conditionScore}>
+                {report.hard_floor_condition_arrival ? `${report.hard_floor_condition_arrival}/5` : 'N/A'}
+              </Text>
             </View>
           </View>
           {report.flooring_state_description && (
-            <View style={[styles.conditionBox, { marginTop: 8 }]}>
-              <Text style={styles.infoLabel}>Overall Condition Notes</Text>
-              <Text style={[styles.infoValue, { marginTop: 4 }]}>
-                {report.flooring_state_description}
-              </Text>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoLabel}>Condition Notes</Text>
+              <Text style={styles.infoValue}>{report.flooring_state_description}</Text>
             </View>
           )}
         </View>
 
         {/* Work Completed */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Work Completed</Text>
-          <View style={styles.workDescription}>
-            <Text style={styles.infoValue}>
-              {report.work_description || 'No description provided.'}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Work Completed</Text>
+          </View>
+          <View style={styles.workBox}>
+            <Text style={styles.workText}>
+              {report.work_description || 'No work description provided.'}
             </Text>
           </View>
         </View>
@@ -392,18 +697,16 @@ export function FieldReportPDFDocument({ report, companySettings }: FieldReportP
         {/* Problem Areas (if any) */}
         {report.had_problem_areas && report.problem_areas_description && (
           <View style={styles.section}>
-            <View style={styles.problemSection}>
-              <Text style={styles.problemTitle}>Problem Areas Identified</Text>
-              <Text style={styles.infoValue}>{report.problem_areas_description}</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Problem Areas Identified</Text>
+            </View>
+            <View style={styles.problemBox}>
+              <Text style={styles.problemText}>{report.problem_areas_description}</Text>
               {report.methods_attempted && (
-                <View style={{ marginTop: 12 }}>
-                  <Text style={[styles.infoLabel, { color: '#92400e' }]}>
-                    Methods Attempted
-                  </Text>
-                  <Text style={[styles.infoValue, { marginTop: 4 }]}>
-                    {report.methods_attempted}
-                  </Text>
-                </View>
+                <>
+                  <Text style={styles.problemMethodsLabel}>Methods Attempted</Text>
+                  <Text style={styles.problemText}>{report.methods_attempted}</Text>
+                </>
               )}
             </View>
           </View>
@@ -412,52 +715,97 @@ export function FieldReportPDFDocument({ report, companySettings }: FieldReportP
         {/* Customer Signature */}
         {report.customer_signature_data && (
           <View style={styles.signatureSection}>
-            <Text style={styles.infoLabel}>Customer Signature</Text>
-            <Image src={report.customer_signature_data} style={styles.signatureImage} />
-            {report.customer_signature_name && (
-              <Text style={styles.signatureName}>
-                Signed by: {report.customer_signature_name}
+            <Text style={styles.signatureTitle}>Customer Acknowledgment</Text>
+            <View style={styles.signatureBox}>
+              <Image src={report.customer_signature_data} style={styles.signatureImage} />
+              {report.customer_signature_name && (
+                <Text style={styles.signatureName}>
+                  Signed by: {report.customer_signature_name}
+                </Text>
+              )}
+              <Text style={styles.signatureDate}>
+                Date: {formatDate(report.service_date)}
               </Text>
-            )}
+            </View>
           </View>
         )}
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text>Generated on {new Date().toLocaleDateString('en-AU')}</Text>
+          <Text>Generated on {new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
+          <Text style={styles.pageNumber}>Page 1{hasAnyPhotos ? ` of ${hasPhotoPairs && hasAdditionalPhotos ? '3' : '2'}` : ''}</Text>
           <Text>{companySettings.name}</Text>
         </View>
       </Page>
 
-      {/* Photos Page (if there are photos) */}
-      {beforePhotos.length > 0 && (
+      {/* Page 2: Before & After Photos */}
+      {hasPhotoPairs && (
         <Page size="A4" style={styles.page}>
-          <Text style={styles.sectionTitle}>Before & After Photos</Text>
-          <View style={styles.photoSection}>
-            {beforePhotos.map((beforePhoto, index) => {
-              const pairedAfter = afterPhotos.find(
-                a => a.id === beforePhoto.paired_photo_id || a.paired_photo_id === beforePhoto.id
-              );
-              return (
-                <View key={beforePhoto.id} style={styles.photoPair} wrap={false}>
-                  <View style={styles.photoContainer}>
-                    <Text style={[styles.photoLabel, styles.beforeLabel]}>BEFORE</Text>
-                    <Image src={beforePhoto.file_url} style={styles.photo} />
-                  </View>
-                  {pairedAfter && (
-                    <View style={styles.photoContainer}>
-                      <Text style={[styles.photoLabel, styles.afterLabel]}>AFTER</Text>
-                      <Image src={pairedAfter.file_url} style={styles.photo} />
-                    </View>
+          <Text style={styles.photoPageTitle}>Before & After Documentation</Text>
+          
+          {photoPairs.map((pair, index) => (
+            <View key={pair.before.id} style={styles.photoPairContainer} wrap={false}>
+              <View style={styles.photoPair}>
+                <View style={styles.photoWrapper}>
+                  <Text style={styles.photoLabelBefore}>Before</Text>
+                  <Image src={pair.before.file_url} style={styles.photo} />
+                  {pair.before.caption && (
+                    <Text style={styles.photoCaption}>{pair.before.caption}</Text>
                   )}
                 </View>
-              );
-            })}
+                {pair.after ? (
+                  <View style={styles.photoWrapper}>
+                    <Text style={styles.photoLabelAfter}>After</Text>
+                    <Image src={pair.after.file_url} style={styles.photo} />
+                    {pair.after.caption && (
+                      <Text style={styles.photoCaption}>{pair.after.caption}</Text>
+                    )}
+                  </View>
+                ) : (
+                  <View style={styles.photoWrapper}>
+                    <Text style={styles.photoLabelAfter}>After</Text>
+                    <View style={styles.noPhotoPlaceholder}>
+                      <Text style={styles.noPhotoText}>No after photo</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          ))}
+
+          {/* Footer */}
+          <View style={styles.footer} fixed>
+            <Text>Generated on {new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
+            <Text style={styles.pageNumber}>Page 2{hasAdditionalPhotos ? ' of 3' : ' of 2'}</Text>
+            <Text>{companySettings.name}</Text>
+          </View>
+        </Page>
+      )}
+
+      {/* Page 3: Additional Photos (if any) */}
+      {hasAdditionalPhotos && (
+        <Page size="A4" style={styles.page}>
+          <Text style={styles.photoPageTitle}>Additional Documentation</Text>
+          
+          <View style={styles.additionalPhotosGrid}>
+            {additionalPhotos.map((photo) => (
+              <View key={photo.id} style={styles.additionalPhotoWrapper} wrap={false}>
+                <Text style={styles.additionalPhotoLabel}>
+                  {photo.photo_type === 'problem' ? 'Problem Area' : 
+                   photo.photo_type === 'after' ? 'After' : 'Documentation'}
+                </Text>
+                <Image src={photo.file_url} style={styles.additionalPhoto} />
+                {photo.caption && (
+                  <Text style={styles.photoCaption}>{photo.caption}</Text>
+                )}
+              </View>
+            ))}
           </View>
 
           {/* Footer */}
           <View style={styles.footer} fixed>
-            <Text>Generated on {new Date().toLocaleDateString('en-AU')}</Text>
+            <Text>Generated on {new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
+            <Text style={styles.pageNumber}>Page {hasPhotoPairs ? '3 of 3' : '2 of 2'}</Text>
             <Text>{companySettings.name}</Text>
           </View>
         </Page>
