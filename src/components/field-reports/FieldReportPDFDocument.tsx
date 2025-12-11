@@ -5,24 +5,13 @@ import {
   View,
   StyleSheet,
   Image,
-  Font,
 } from '@react-pdf/renderer';
-
-// Register fonts for better typography
-Font.register({
-  family: 'Inter',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiJ-Ek-_EeA.woff2', fontWeight: 600 },
-    { src: 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff2', fontWeight: 700 },
-  ],
-});
 
 const styles = StyleSheet.create({
   page: {
     padding: 40,
     paddingBottom: 60,
-    fontFamily: 'Inter',
+    fontFamily: 'Helvetica',
     fontSize: 10,
     color: '#1a1a1a',
     backgroundColor: '#ffffff',
@@ -47,7 +36,7 @@ const styles = StyleSheet.create({
   },
   textLogo: {
     fontSize: 20,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     color: '#3b82f6',
   },
   headerRight: {
@@ -62,7 +51,7 @@ const styles = StyleSheet.create({
   },
   reportNumberLarge: {
     fontSize: 16,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     color: '#111827',
     marginTop: 2,
   },
@@ -81,7 +70,7 @@ const styles = StyleSheet.create({
   },
   mainTitle: {
     fontSize: 22,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     color: '#111827',
     marginBottom: 4,
   },
@@ -110,7 +99,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     color: '#111827',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -140,7 +129,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 8,
-    fontWeight: 600,
+    fontFamily: 'Helvetica-Bold',
     color: '#6b7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -153,7 +142,7 @@ const styles = StyleSheet.create({
   },
   infoValueLarge: {
     fontSize: 12,
-    fontWeight: 600,
+    fontFamily: 'Helvetica-Bold',
     color: '#111827',
   },
   // Condition rating styles
@@ -173,7 +162,7 @@ const styles = StyleSheet.create({
   },
   conditionLabel: {
     fontSize: 9,
-    fontWeight: 600,
+    fontFamily: 'Helvetica-Bold',
     color: '#6b7280',
     textTransform: 'uppercase',
     marginBottom: 8,
@@ -192,7 +181,7 @@ const styles = StyleSheet.create({
   },
   conditionScore: {
     fontSize: 14,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     color: '#111827',
     marginTop: 4,
   },
@@ -219,7 +208,7 @@ const styles = StyleSheet.create({
   },
   problemTitle: {
     fontSize: 11,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     color: '#92400e',
     marginBottom: 8,
   },
@@ -230,7 +219,7 @@ const styles = StyleSheet.create({
   },
   problemMethodsLabel: {
     fontSize: 9,
-    fontWeight: 600,
+    fontFamily: 'Helvetica-Bold',
     color: '#92400e',
     textTransform: 'uppercase',
     marginTop: 12,
@@ -239,7 +228,7 @@ const styles = StyleSheet.create({
   // Photo styles
   photoPageTitle: {
     fontSize: 18,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     color: '#111827',
     textAlign: 'center',
     marginBottom: 20,
@@ -264,7 +253,7 @@ const styles = StyleSheet.create({
   },
   photoLabelBefore: {
     fontSize: 9,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
     paddingVertical: 6,
     marginBottom: 6,
@@ -276,7 +265,7 @@ const styles = StyleSheet.create({
   },
   photoLabelAfter: {
     fontSize: 9,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
     paddingVertical: 6,
     marginBottom: 6,
@@ -327,7 +316,7 @@ const styles = StyleSheet.create({
   },
   additionalPhotoLabel: {
     fontSize: 9,
-    fontWeight: 600,
+    fontFamily: 'Helvetica-Bold',
     textAlign: 'center',
     paddingVertical: 4,
     marginBottom: 4,
@@ -353,7 +342,7 @@ const styles = StyleSheet.create({
   },
   signatureTitle: {
     fontSize: 12,
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     color: '#111827',
     marginBottom: 12,
     textAlign: 'center',
@@ -417,7 +406,7 @@ const styles = StyleSheet.create({
   },
   contractorValue: {
     fontSize: 9,
-    fontWeight: 600,
+    fontFamily: 'Helvetica-Bold',
     color: '#1e40af',
   },
 });
