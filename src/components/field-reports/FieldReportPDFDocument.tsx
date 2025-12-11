@@ -273,10 +273,11 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: 140,
-    objectFit: 'cover',
+    objectFit: 'contain' as const,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
   },
   photoCaption: {
     fontSize: 7,
@@ -323,10 +324,11 @@ const styles = StyleSheet.create({
   additionalPhoto: {
     width: '100%',
     height: 110,
-    objectFit: 'cover',
+    objectFit: 'contain' as const,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
   },
   // Footer styles
   footer: {
