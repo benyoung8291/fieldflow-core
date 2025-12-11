@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import PasswordChangeSection from './PasswordChangeSection';
+import { EmailSignatureEditor } from './EmailSignatureEditor';
 
 interface Pipeline {
   id: string;
@@ -240,6 +241,8 @@ export default function UserProfileTab() {
           </div>
         </CardContent>
       </Card>
+
+      <EmailSignatureEditor />
 
       <PasswordChangeSection />
     </div>

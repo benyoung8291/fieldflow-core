@@ -2622,6 +2622,64 @@ export type Database = {
           },
         ]
       }
+      email_snippets: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          is_shared: boolean | null
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_shared?: boolean | null
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_shared?: boolean | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_snippets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_snippets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_snippets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_attachments: {
         Row: {
           expense_id: string
@@ -5484,6 +5542,7 @@ export type Database = {
           default_pipeline_id: string | null
           default_stage_id: string | null
           email: string | null
+          email_signature: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           employment_type: string | null
@@ -5523,6 +5582,7 @@ export type Database = {
           default_pipeline_id?: string | null
           default_stage_id?: string | null
           email?: string | null
+          email_signature?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employment_type?: string | null
@@ -5562,6 +5622,7 @@ export type Database = {
           default_pipeline_id?: string | null
           default_stage_id?: string | null
           email?: string | null
+          email_signature?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employment_type?: string | null
