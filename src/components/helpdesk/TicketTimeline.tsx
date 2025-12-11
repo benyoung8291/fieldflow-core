@@ -64,7 +64,7 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
           created_user:profiles!helpdesk_messages_created_by_fkey(first_name, last_name, avatar_url)
         `)
         .eq("ticket_id", ticketId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false }); // Newest first
 
       if (error) throw error;
       return data as any[];
@@ -107,24 +107,15 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     }
   };
 
-  // Combine and sort all timeline items chronologically
+  // Combine and sort all timeline items - newest first
   const timelineItems = [...(messages || []), ...(auditLogs || [])].sort((a, b) => {
-    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   // Get email thread for replies (all previous emails in chronological order)
   const emailThread = (messages || [])
     .filter((m: any) => m.message_type === 'email')
     .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-  // Auto-scroll to bottom on load
-  useEffect(() => {
-    if (scrollRef.current && timelineItems.length > 0) {
-      setTimeout(() => {
-        scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      }, 100);
-    }
-  }, [ticketId, timelineItems.length]);
 
   const toggleEmailExpanded = (messageId: string) => {
     setExpandedEmails(prev => {
@@ -181,25 +172,60 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
     );
   };
 
-  const stripQuotedReply = (html: string) => {
-    // Simple heuristic: remove everything after common reply indicators
+  // Parse email content to separate main message from quoted thread
+  const parseEmailContent = (html: string): { mainContent: string; quotedContent: string | null } => {
+    if (!html) return { mainContent: '', quotedContent: null };
+    
+    // Common email reply/forward indicators
     const indicators = [
       /<div[^>]*class="[^"]*gmail_quote[^"]*"[^>]*>/i,
       /<div[^>]*id="[^"]*divRplyFwdMsg[^"]*"[^>]*>/i,
-      /<hr[^>]*>/i,
-      /On.*wrote:/i,
-      /From:.*Sent:/i,
+      /<blockquote[^>]*>/i,
+      /<div[^>]*class="[^"]*OutlookMessageHeader[^"]*"[^>]*>/i,
+      /<hr[^>]*style="[^"]*display:\s*inline-block[^"]*"[^>]*>/i,
+      /_{10,}/,  // Long underscores
+      /-{10,}/,  // Long dashes
     ];
     
-    let result = html;
+    // Text-based indicators (for plain text or simple HTML)
+    const textIndicators = [
+      /On\s+.{10,60}\s+wrote:/i,
+      /From:\s+.+\s+Sent:/i,
+      /-----\s*Original\s+Message\s*-----/i,
+      /_{3,}\s*From:/i,
+      /Begin forwarded message:/i,
+    ];
+    
+    let splitIndex = -1;
+    
+    // Check HTML indicators first
     for (const indicator of indicators) {
-      const match = result.match(indicator);
-      if (match && match.index) {
-        result = result.substring(0, match.index);
+      const match = html.match(indicator);
+      if (match && match.index !== undefined && match.index > 50) {
+        splitIndex = match.index;
         break;
       }
     }
-    return result;
+    
+    // Check text indicators if no HTML indicator found
+    if (splitIndex === -1) {
+      for (const indicator of textIndicators) {
+        const match = html.match(indicator);
+        if (match && match.index !== undefined && match.index > 50) {
+          splitIndex = match.index;
+          break;
+        }
+      }
+    }
+    
+    if (splitIndex > 0) {
+      return {
+        mainContent: html.substring(0, splitIndex).trim(),
+        quotedContent: html.substring(splitIndex).trim()
+      };
+    }
+    
+    return { mainContent: html, quotedContent: null };
   };
 
   const sendReplyMutation = useMutation({
@@ -802,11 +828,61 @@ export function TicketTimeline({ ticketId, ticket }: TicketTimelineProps) {
                             </div>
                             <div className="text-sm">
                               <EmailTextSelector ticketId={ticketId}>
-                                {message.body_html ? (
-                                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.body_html) }} />
-                                ) : (
-                                  <div>{message.body_text || message.body}</div>
-                                )}
+                                {(() => {
+                                  const rawContent = message.body_html || message.body_text || message.body || '';
+                                  const isHtml = !!message.body_html;
+                                  const { mainContent, quotedContent } = parseEmailContent(rawContent);
+                                  const isExpanded = expandedEmails.has(message.id);
+                                  
+                                  return (
+                                    <div className="space-y-2">
+                                      {/* Main message content */}
+                                      {isHtml ? (
+                                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mainContent) }} />
+                                      ) : (
+                                        <div className="whitespace-pre-wrap">{mainContent}</div>
+                                      )}
+                                      
+                                      {/* Quoted thread - expandable */}
+                                      {quotedContent && (
+                                        <div className="mt-3">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleEmailExpanded(message.id);
+                                            }}
+                                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+                                          >
+                                            {isExpanded ? (
+                                              <>
+                                                <ChevronUp className="h-3.5 w-3.5" />
+                                                <span>Hide thread</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <ChevronDown className="h-3.5 w-3.5" />
+                                                <span>Show thread</span>
+                                              </>
+                                            )}
+                                          </button>
+                                          
+                                          {isExpanded && (
+                                            <div className="mt-2 pl-3 border-l-2 border-muted text-muted-foreground">
+                                              {isHtml ? (
+                                                <div 
+                                                  className="text-sm opacity-75"
+                                                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(quotedContent) }} 
+                                                />
+                                              ) : (
+                                                <div className="text-sm whitespace-pre-wrap opacity-75">{quotedContent}</div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </EmailTextSelector>
                             </div>
                           </Card>
