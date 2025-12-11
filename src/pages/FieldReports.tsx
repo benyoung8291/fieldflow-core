@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useLogListPageAccess } from '@/hooks/useLogDetailPageAccess';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Search, Download, Edit, Plus, AlertTriangle, Loader2 } from 'lucide-react';
+import { FileText, Search, Download, Edit, Plus, AlertTriangle, Loader2, X, ImagePlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +24,16 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import FieldReportDialog from '@/components/field-reports/FieldReportDialog';
 import { ContractorMappingDialog } from '@/components/field-reports/ContractorMappingDialog';
 import { QuickMappingPanel } from '@/components/field-reports/QuickMappingPanel';
@@ -47,6 +57,18 @@ interface EditFormData {
   had_problem_areas: boolean;
 }
 
+interface PhotoToDelete {
+  id: string;
+  file_url: string;
+  photo_type: string;
+}
+
+interface NewPhoto {
+  file: File;
+  preview: string;
+  photo_type: 'before' | 'after';
+}
+
 export default function FieldReports() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,6 +81,17 @@ export default function FieldReports() {
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [editFormData, setEditFormData] = useState<EditFormData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Photo management state
+  const [photosToDelete, setPhotosToDelete] = useState<string[]>([]);
+  const [newPhotos, setNewPhotos] = useState<NewPhoto[]>([]);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState<PhotoToDelete | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  
+  // File input refs
+  const beforePhotoInputRef = useRef<HTMLInputElement>(null);
+  const afterPhotoInputRef = useRef<HTMLInputElement>(null);
 
   // Log list page access for audit trail
   useLogListPageAccess('field_reports');
@@ -241,12 +274,54 @@ export default function FieldReports() {
       methods_attempted: selectedReport.methods_attempted || '',
       had_problem_areas: selectedReport.had_problem_areas || false,
     });
+    setPhotosToDelete([]);
+    setNewPhotos([]);
     setEditMode(true);
   };
 
   const handleCancelEdit = () => {
     setEditMode(false);
     setEditFormData(null);
+    setPhotosToDelete([]);
+    // Cleanup previews
+    newPhotos.forEach(p => URL.revokeObjectURL(p.preview));
+    setNewPhotos([]);
+  };
+  
+  const handleDeletePhotoClick = (photo: PhotoToDelete) => {
+    setPhotoToDelete(photo);
+    setDeleteConfirmText('');
+    setDeleteConfirmOpen(true);
+  };
+  
+  const handleConfirmDeletePhoto = () => {
+    if (photoToDelete && deleteConfirmText.toLowerCase() === 'delete') {
+      setPhotosToDelete(prev => [...prev, photoToDelete.id]);
+      setDeleteConfirmOpen(false);
+      setPhotoToDelete(null);
+      setDeleteConfirmText('');
+    }
+  };
+  
+  const handleAddPhoto = (files: FileList | null, photoType: 'before' | 'after') => {
+    if (!files || files.length === 0) return;
+    
+    const newItems: NewPhoto[] = Array.from(files).map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      photo_type: photoType,
+    }));
+    
+    setNewPhotos(prev => [...prev, ...newItems]);
+  };
+  
+  const handleRemoveNewPhoto = (index: number) => {
+    setNewPhotos(prev => {
+      const updated = [...prev];
+      URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
   };
 
   const handleSaveChanges = async () => {
@@ -254,6 +329,78 @@ export default function FieldReports() {
     
     try {
       setIsSaving(true);
+      
+      // 1. Delete photos marked for deletion
+      if (photosToDelete.length > 0) {
+        // Get file URLs for storage deletion
+        const photosData = selectedReport?.photos?.filter((p: any) => photosToDelete.includes(p.id)) || [];
+        
+        // Delete from storage
+        for (const photo of photosData) {
+          try {
+            const urlParts = photo.file_url.split('/');
+            const fileName = urlParts[urlParts.length - 1];
+            await supabase.storage.from('field-report-photos').remove([fileName]);
+          } catch (storageError) {
+            console.warn('Failed to delete from storage:', storageError);
+          }
+        }
+        
+        // Delete from database
+        const { error: deleteError } = await supabase
+          .from('field_report_photos')
+          .delete()
+          .in('id', photosToDelete);
+          
+        if (deleteError) throw deleteError;
+      }
+      
+      // 2. Upload new photos
+      if (newPhotos.length > 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('tenant_id')
+          .eq('id', user.id)
+          .single();
+          
+        if (!profile?.tenant_id) throw new Error('No tenant found');
+        
+        for (const newPhoto of newPhotos) {
+          // Upload to storage
+          const fileExt = newPhoto.file.name.split('.').pop();
+          const fileName = `${selectedReportId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('field-report-photos')
+            .upload(fileName, newPhoto.file);
+            
+          if (uploadError) throw uploadError;
+          
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('field-report-photos')
+            .getPublicUrl(fileName);
+          
+          // Insert record
+          const { error: insertError } = await supabase
+            .from('field_report_photos')
+            .insert({
+              field_report_id: selectedReportId,
+              tenant_id: profile.tenant_id,
+              file_url: publicUrl,
+              file_name: newPhoto.file.name,
+              photo_type: newPhoto.photo_type,
+              uploaded_by: user.id,
+            });
+            
+          if (insertError) throw insertError;
+        }
+      }
+      
+      // 3. Update report fields
       const { error } = await supabase
         .from('field_reports')
         .update({
@@ -277,6 +424,9 @@ export default function FieldReports() {
       queryClient.invalidateQueries({ queryKey: ['field-report', selectedReportId] });
       setEditMode(false);
       setEditFormData(null);
+      setPhotosToDelete([]);
+      newPhotos.forEach(p => URL.revokeObjectURL(p.preview));
+      setNewPhotos([]);
     } catch (error) {
       console.error('Error updating report:', error);
       toast.error('Failed to update report');
@@ -743,70 +893,256 @@ export default function FieldReports() {
                         )}
 
                         {/* Photos */}
-                        {selectedReport.photos && selectedReport.photos.length > 0 && (
-                          <div className="space-y-4 border-t pt-4">
+                        <div className="space-y-4 border-t pt-4">
+                          <div className="flex items-center justify-between">
                             <h3 className="font-semibold">Photos</h3>
-                            
-                            {/* Before/After Pairs */}
-                            {beforePhotos.length > 0 && (
-                              <div className="space-y-2">
-                                <Label>Before & After</Label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {beforePhotos.map((beforePhoto: any) => {
-                                    const pairedAfter = afterPhotos.find((a: any) => 
-                                      a.id === beforePhoto.paired_photo_id || a.paired_photo_id === beforePhoto.id
-                                    );
-                                    return (
-                                      <div key={beforePhoto.id} className="grid grid-cols-2 gap-2">
-                                        <div className="relative">
+                            {editMode && (
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => beforePhotoInputRef.current?.click()}
+                                >
+                                  <ImagePlus className="h-4 w-4 mr-1" />
+                                  Add Before
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => afterPhotoInputRef.current?.click()}
+                                >
+                                  <ImagePlus className="h-4 w-4 mr-1" />
+                                  Add After
+                                </Button>
+                                <input
+                                  ref={beforePhotoInputRef}
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  className="hidden"
+                                  onChange={(e) => handleAddPhoto(e.target.files, 'before')}
+                                />
+                                <input
+                                  ref={afterPhotoInputRef}
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  className="hidden"
+                                  onChange={(e) => handleAddPhoto(e.target.files, 'after')}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Before/After Pairs */}
+                          {beforePhotos.length > 0 && (
+                            <div className="space-y-2">
+                              <Label>Before & After</Label>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {beforePhotos.map((beforePhoto: any) => {
+                                  const isMarkedForDelete = photosToDelete.includes(beforePhoto.id);
+                                  const pairedAfter = afterPhotos.find((a: any) => 
+                                    a.id === beforePhoto.paired_photo_id || a.paired_photo_id === beforePhoto.id
+                                  );
+                                  const isPairedMarkedForDelete = pairedAfter && photosToDelete.includes(pairedAfter.id);
+                                  
+                                  return (
+                                    <div key={beforePhoto.id} className="grid grid-cols-2 gap-2">
+                                      <div className={`relative ${isMarkedForDelete ? 'opacity-50' : ''}`}>
+                                        <img 
+                                          src={beforePhoto.file_url} 
+                                          alt="Before" 
+                                          className="w-full h-48 object-cover rounded"
+                                        />
+                                        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                          Before
+                                        </div>
+                                        {isMarkedForDelete && (
+                                          <div className="absolute inset-0 bg-destructive/30 rounded flex items-center justify-center">
+                                            <span className="text-destructive-foreground bg-destructive px-2 py-1 rounded text-xs font-medium">
+                                              Will be deleted
+                                            </span>
+                                          </div>
+                                        )}
+                                        {editMode && !isMarkedForDelete && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeletePhotoClick({
+                                              id: beforePhoto.id,
+                                              file_url: beforePhoto.file_url,
+                                              photo_type: 'before'
+                                            })}
+                                            className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded-full hover:bg-destructive/80"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </button>
+                                        )}
+                                      </div>
+                                      {pairedAfter && (
+                                        <div className={`relative ${isPairedMarkedForDelete ? 'opacity-50' : ''}`}>
                                           <img 
-                                            src={beforePhoto.file_url} 
-                                            alt="Before" 
+                                            src={pairedAfter.file_url} 
+                                            alt="After" 
                                             className="w-full h-48 object-cover rounded"
                                           />
-                                          <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                                            Before
+                                          <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                            After
                                           </div>
-                                        </div>
-                                        {pairedAfter && (
-                                          <div className="relative">
-                                            <img 
-                                              src={pairedAfter.file_url} 
-                                              alt="After" 
-                                              className="w-full h-48 object-cover rounded"
-                                            />
-                                            <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
-                                              After
+                                          {isPairedMarkedForDelete && (
+                                            <div className="absolute inset-0 bg-destructive/30 rounded flex items-center justify-center">
+                                              <span className="text-destructive-foreground bg-destructive px-2 py-1 rounded text-xs font-medium">
+                                                Will be deleted
+                                              </span>
                                             </div>
+                                          )}
+                                          {editMode && !isPairedMarkedForDelete && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleDeletePhotoClick({
+                                                id: pairedAfter.id,
+                                                file_url: pairedAfter.file_url,
+                                                photo_type: 'after'
+                                              })}
+                                              className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded-full hover:bg-destructive/80"
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Unpaired After Photos */}
+                          {afterPhotos.filter((a: any) => 
+                            !beforePhotos.some((b: any) => b.paired_photo_id === a.id || a.paired_photo_id === b.id)
+                          ).length > 0 && (
+                            <div className="space-y-2">
+                              <Label>After Photos (Unpaired)</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {afterPhotos
+                                  .filter((a: any) => !beforePhotos.some((b: any) => b.paired_photo_id === a.id || a.paired_photo_id === b.id))
+                                  .map((photo: any) => {
+                                    const isMarkedForDelete = photosToDelete.includes(photo.id);
+                                    return (
+                                      <div key={photo.id} className={`relative ${isMarkedForDelete ? 'opacity-50' : ''}`}>
+                                        <img 
+                                          src={photo.file_url} 
+                                          alt="After" 
+                                          className="w-full h-32 object-cover rounded"
+                                        />
+                                        <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                          After
+                                        </div>
+                                        {isMarkedForDelete && (
+                                          <div className="absolute inset-0 bg-destructive/30 rounded flex items-center justify-center">
+                                            <span className="text-destructive-foreground bg-destructive px-2 py-1 rounded text-xs font-medium">
+                                              Will be deleted
+                                            </span>
                                           </div>
+                                        )}
+                                        {editMode && !isMarkedForDelete && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeletePhotoClick({
+                                              id: photo.id,
+                                              file_url: photo.file_url,
+                                              photo_type: 'after'
+                                            })}
+                                            className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded-full hover:bg-destructive/80"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </button>
                                         )}
                                       </div>
                                     );
                                   })}
-                                </div>
                               </div>
-                            )}
+                            </div>
+                          )}
 
-                            {/* Other Photos */}
-                            {selectedReport.photos.filter((p: any) => !['before', 'after'].includes(p.photo_type)).length > 0 && (
-                              <div className="space-y-2">
-                                <Label>Additional Photos</Label>
-                                <div className="grid grid-cols-3 gap-2">
-                                  {selectedReport.photos
-                                    .filter((p: any) => !['before', 'after'].includes(p.photo_type))
-                                    .map((photo: any) => (
-                                      <img 
-                                        key={photo.id}
-                                        src={photo.file_url} 
-                                        alt={photo.photo_type} 
-                                        className="w-full h-32 object-cover rounded"
-                                      />
-                                    ))}
-                                </div>
+                          {/* New Photos Preview */}
+                          {editMode && newPhotos.length > 0 && (
+                            <div className="space-y-2">
+                              <Label>New Photos (Pending Upload)</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {newPhotos.map((newPhoto, index) => (
+                                  <div key={index} className="relative">
+                                    <img 
+                                      src={newPhoto.preview} 
+                                      alt={`New ${newPhoto.photo_type}`} 
+                                      className="w-full h-32 object-cover rounded border-2 border-dashed border-primary"
+                                    />
+                                    <div className={`absolute top-2 left-2 ${newPhoto.photo_type === 'before' ? 'bg-red-500' : 'bg-green-500'} text-white px-2 py-1 rounded text-xs font-medium`}>
+                                      {newPhoto.photo_type === 'before' ? 'Before' : 'After'}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveNewPhoto(index)}
+                                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded-full hover:bg-destructive/80"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                ))}
                               </div>
-                            )}
-                          </div>
-                        )}
+                            </div>
+                          )}
+
+                          {/* Other Photos */}
+                          {selectedReport?.photos?.filter((p: any) => !['before', 'after'].includes(p.photo_type)).length > 0 && (
+                            <div className="space-y-2">
+                              <Label>Additional Photos</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {selectedReport.photos
+                                  .filter((p: any) => !['before', 'after'].includes(p.photo_type))
+                                  .map((photo: any) => {
+                                    const isMarkedForDelete = photosToDelete.includes(photo.id);
+                                    return (
+                                      <div key={photo.id} className={`relative ${isMarkedForDelete ? 'opacity-50' : ''}`}>
+                                        <img 
+                                          src={photo.file_url} 
+                                          alt={photo.photo_type} 
+                                          className="w-full h-32 object-cover rounded"
+                                        />
+                                        {isMarkedForDelete && (
+                                          <div className="absolute inset-0 bg-destructive/30 rounded flex items-center justify-center">
+                                            <span className="text-destructive-foreground bg-destructive px-2 py-1 rounded text-xs font-medium">
+                                              Will be deleted
+                                            </span>
+                                          </div>
+                                        )}
+                                        {editMode && !isMarkedForDelete && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeletePhotoClick({
+                                              id: photo.id,
+                                              file_url: photo.file_url,
+                                              photo_type: photo.photo_type
+                                            })}
+                                            className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded-full hover:bg-destructive/80"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Empty state */}
+                          {(!selectedReport?.photos || selectedReport.photos.length === 0) && newPhotos.length === 0 && (
+                            <p className="text-muted-foreground text-sm">No photos attached</p>
+                          )}
+                        </div>
 
                         {/* Problem Areas */}
                         {(editMode || selectedReport.had_problem_areas) && (
@@ -888,6 +1224,57 @@ export default function FieldReports() {
         onOpenChange={setMappingDialogOpen}
         report={reportToMap}
       />
+
+      {/* Delete Photo Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Photo Permanently
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              {photoToDelete && (
+                <div className="flex justify-center my-4">
+                  <img 
+                    src={photoToDelete.file_url} 
+                    alt="Photo to delete" 
+                    className="max-h-40 rounded border"
+                  />
+                </div>
+              )}
+              <p>
+                This action cannot be undone. The photo will be permanently deleted from this report.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="delete-confirm">Type <span className="font-bold">delete</span> to confirm:</Label>
+                <Input
+                  id="delete-confirm"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type 'delete' to confirm"
+                  autoComplete="off"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteConfirmText('');
+              setPhotoToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeletePhoto}
+              disabled={deleteConfirmText.toLowerCase() !== 'delete'}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Photo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
