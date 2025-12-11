@@ -198,19 +198,230 @@ All colors MUST be HSL.
   }
 }
 
-/* Rich text editor styles */
+/* Rich text editor styles - Gmail quality */
 .rich-text-editor {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.rich-text-editor .ql-toolbar {
+/* Gmail-style toolbar */
+.rich-text-editor.gmail-style .ql-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  border: none;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.3);
+  flex-shrink: 0;
+}
+
+/* Toolbar format groups with separators */
+.rich-text-editor.gmail-style .ql-toolbar .ql-formats {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 8px;
+  padding-right: 8px;
+  border-right: 1px solid hsl(var(--border) / 0.5);
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-formats:last-child {
+  border-right: none;
+  margin-right: 0;
+  padding-right: 0;
+}
+
+/* Gmail-style toolbar buttons */
+.rich-text-editor.gmail-style .ql-toolbar button {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rich-text-editor.gmail-style .ql-toolbar button:hover {
+  background: hsl(var(--accent));
+}
+
+.rich-text-editor.gmail-style .ql-toolbar button.ql-active {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+}
+
+.rich-text-editor.gmail-style .ql-toolbar button.ql-active .ql-stroke {
+  stroke: hsl(var(--primary));
+}
+
+.rich-text-editor.gmail-style .ql-toolbar button.ql-active .ql-fill {
+  fill: hsl(var(--primary));
+}
+
+/* Undo/Redo buttons */
+.rich-text-editor.gmail-style .ql-toolbar button.ql-undo,
+.rich-text-editor.gmail-style .ql-toolbar button.ql-redo {
+  width: 28px;
+  height: 28px;
+}
+
+/* Dropdown pickers - Font, Size, Color, Alignment */
+.rich-text-editor.gmail-style .ql-toolbar .ql-picker {
+  height: 28px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-picker:hover {
+  background: hsl(var(--accent));
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-picker-label {
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  border: none;
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-picker-options {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.1);
+  padding: 4px;
+  margin-top: 4px;
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-picker-item {
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-picker-item:hover {
+  background: hsl(var(--accent));
+}
+
+/* Color picker styling */
+.rich-text-editor.gmail-style .ql-toolbar .ql-color-picker,
+.rich-text-editor.gmail-style .ql-toolbar .ql-background {
+  width: auto;
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-color-picker .ql-picker-options,
+.rich-text-editor.gmail-style .ql-toolbar .ql-background .ql-picker-options {
+  padding: 6px;
+  width: auto;
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-color-picker .ql-picker-item,
+.rich-text-editor.gmail-style .ql-toolbar .ql-background .ql-picker-item {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  margin: 2px;
+  padding: 0;
+}
+
+/* Font size labels */
+.rich-text-editor.gmail-style .ql-toolbar .ql-size .ql-picker-label[data-value="small"]::before,
+.rich-text-editor.gmail-style .ql-toolbar .ql-size .ql-picker-item[data-value="small"]::before {
+  content: 'Small';
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-size .ql-picker-label:not([data-value])::before,
+.rich-text-editor.gmail-style .ql-toolbar .ql-size .ql-picker-item:not([data-value])::before {
+  content: 'Normal';
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-size .ql-picker-label[data-value="large"]::before,
+.rich-text-editor.gmail-style .ql-toolbar .ql-size .ql-picker-item[data-value="large"]::before {
+  content: 'Large';
+}
+
+.rich-text-editor.gmail-style .ql-toolbar .ql-size .ql-picker-label[data-value="huge"]::before,
+.rich-text-editor.gmail-style .ql-toolbar .ql-size .ql-picker-item[data-value="huge"]::before {
+  content: 'Huge';
+}
+
+/* Container styling */
+.rich-text-editor.gmail-style .ql-container {
+  border: none;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: inherit;
+}
+
+/* Editor area */
+.rich-text-editor.gmail-style .ql-editor {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
+
+.rich-text-editor.gmail-style .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+  font-style: normal;
+  left: 16px;
+}
+
+/* SVG icon colors */
+.rich-text-editor.gmail-style .ql-stroke {
+  stroke: hsl(var(--foreground));
+}
+
+.rich-text-editor.gmail-style .ql-fill {
+  fill: hsl(var(--foreground));
+}
+
+.rich-text-editor.gmail-style .ql-picker-label {
+  color: hsl(var(--foreground));
+}
+
+/* Dark mode refinements */
+.dark .rich-text-editor.gmail-style .ql-toolbar {
+  background: hsl(var(--muted) / 0.2);
+  border-color: hsl(var(--border));
+}
+
+.dark .rich-text-editor.gmail-style .ql-toolbar button:hover {
+  background: hsl(var(--accent));
+}
+
+.dark .rich-text-editor.gmail-style .ql-stroke {
+  stroke: hsl(var(--foreground));
+}
+
+.dark .rich-text-editor.gmail-style .ql-fill {
+  fill: hsl(var(--foreground));
+}
+
+.dark .rich-text-editor.gmail-style .ql-picker-label,
+.dark .rich-text-editor.gmail-style .ql-picker-item {
+  color: hsl(var(--foreground));
+}
+
+.dark .rich-text-editor.gmail-style .ql-picker-options {
+  background: hsl(var(--popover));
+  border-color: hsl(var(--border));
+}
+
+/* Legacy non-gmail-style support */
+.rich-text-editor:not(.gmail-style) .ql-toolbar {
   @apply rounded-t-md border-border bg-muted/50;
   flex-shrink: 0;
 }
 
-.rich-text-editor .ql-container {
+.rich-text-editor:not(.gmail-style) .ql-container {
   @apply rounded-b-md border-border bg-background;
   flex: 1;
   min-height: 0;
@@ -218,30 +429,30 @@ All colors MUST be HSL.
   flex-direction: column;
 }
 
-.rich-text-editor .ql-editor {
+.rich-text-editor:not(.gmail-style) .ql-editor {
   @apply text-sm;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
 
-.rich-text-editor .ql-editor.ql-blank::before {
+.rich-text-editor:not(.gmail-style) .ql-editor.ql-blank::before {
   @apply text-muted-foreground italic;
 }
 
-.dark .rich-text-editor .ql-toolbar {
+.dark .rich-text-editor:not(.gmail-style) .ql-toolbar {
   @apply bg-muted/30;
 }
 
-.dark .rich-text-editor .ql-stroke {
+.dark .rich-text-editor:not(.gmail-style) .ql-stroke {
   @apply stroke-foreground;
 }
 
-.dark .rich-text-editor .ql-fill {
+.dark .rich-text-editor:not(.gmail-style) .ql-fill {
   @apply fill-foreground;
 }
 
-.dark .rich-text-editor .ql-picker-label {
+.dark .rich-text-editor:not(.gmail-style) .ql-picker-label {
   @apply text-foreground;
 }
 

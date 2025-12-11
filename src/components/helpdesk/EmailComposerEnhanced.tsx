@@ -2,16 +2,18 @@ import { useState, forwardRef, useImperativeHandle, useRef, useEffect } from "re
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Paperclip, Send, X, Minus, Maximize2, Settings2, GripHorizontal, BookmarkPlus } from "lucide-react";
+import { Paperclip, Send, X, Minus, Maximize2, GripHorizontal, BookmarkPlus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { RichTextEditorLazy as RichTextEditor } from "@/components/ui/RichTextEditorLazy";
 import { SnippetInserter } from "./SnippetInserter";
 import { SnippetManager } from "./SnippetManager";
 import { SaveDraftAsSnippetDialog } from "./SaveDraftAsSnippetDialog";
+import { EditorEmojiPicker } from "@/components/ui/editor-emoji-picker";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
+import type ReactQuill from "react-quill";
 export interface EmailComposerRef {
   reset: () => void;
   insertContent: (html: string) => void;
@@ -51,6 +53,28 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
     const [includeSignature, setIncludeSignature] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const composerRef = useRef<HTMLDivElement>(null);
+    const editorRef = useRef<ReactQuill>(null);
+
+    // Insert emoji at cursor position
+    const handleEmojiInsert = (emoji: string) => {
+      const editor = editorRef.current?.getEditor();
+      if (editor) {
+        const range = editor.getSelection(true);
+        editor.insertText(range.index, emoji);
+        editor.setSelection(range.index + emoji.length, 0);
+      }
+    };
+
+    // Discard draft
+    const handleDiscard = () => {
+      setBody("");
+      setTo(defaultTo);
+      setCc("");
+      setBcc("");
+      setSubject(defaultSubject);
+      setAttachments([]);
+      setIsExpanded(false);
+    };
 
     // Fetch user profile with signature
     const { data: userProfile } = useQuery({
@@ -364,6 +388,7 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
             {/* Rich Text Editor - full height */}
             <div className="flex-1 flex flex-col min-h-0">
               <RichTextEditor
+                ref={editorRef}
                 value={body}
                 onChange={setBody}
                 placeholder="Write your message..."
@@ -431,9 +456,33 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
             )}
           </div>
 
-          {/* Footer Actions */}
-          <div className="px-4 py-3 border-t bg-muted/30 backdrop-blur-sm flex items-center justify-between">
+          {/* Gmail-style Footer Actions */}
+          <div className="px-3 py-2 border-t bg-muted/20 flex items-center justify-between">
             <div className="flex items-center gap-1">
+              {/* Primary Send Button */}
+              <Button
+                onClick={handleSend}
+                disabled={isSending || !to.trim() || !body.trim()}
+                size="sm"
+                className="px-4"
+              >
+                {isSending ? (
+                  <>
+                    <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Sending
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5 mr-2" />
+                    Send
+                  </>
+                )}
+              </Button>
+              
+              {/* Separator */}
+              <div className="h-5 w-px bg-border mx-1" />
+              
+              {/* Formatting tools group */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -443,13 +492,16 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
               />
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
+                className="h-8 w-8"
                 onClick={() => fileInputRef.current?.click()}
-                className="h-8"
+                title="Attach files"
               >
-                <Paperclip className="h-4 w-4 mr-1" />
-                Attach
+                <Paperclip className="h-4 w-4" />
               </Button>
+              
+              <EditorEmojiPicker onEmojiSelect={handleEmojiInsert} />
+              
               {ticketId && (
                 <SnippetInserter 
                   ticketId={ticketId} 
@@ -458,46 +510,28 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
                 />
               )}
             </div>
-            <div className="flex items-center gap-2">
+            
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSaveSnippetDialogOpen(true)}
                 disabled={!body.trim()}
-                title="Save current content as a reusable snippet"
+                title="Save as snippet"
+                className="h-8 text-xs"
               >
-                <BookmarkPlus className="h-4 w-4 mr-1" />
-                Save as Snippet
+                <BookmarkPlus className="h-3.5 w-3.5 mr-1" />
+                Save Snippet
               </Button>
+              
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsExpanded(false);
-                  toast({
-                    title: "Draft saved",
-                    description: "Your message has been saved as a draft",
-                  });
-                }}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                onClick={handleDiscard}
+                title="Discard draft"
               >
-                Save Draft
-              </Button>
-              <Button
-                onClick={handleSend}
-                disabled={isSending || !to.trim() || !body.trim()}
-                className="min-w-[100px]"
-              >
-                {isSending ? (
-                  <>
-                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Send
-                  </>
-                )}
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
