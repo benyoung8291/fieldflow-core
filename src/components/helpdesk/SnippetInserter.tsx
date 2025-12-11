@@ -423,7 +423,20 @@ export function SnippetInserter({ ticketId, onInsertSnippet, onOpenSnippetManage
   };
 
   const handleInsertCustomSnippet = (snippet: EmailSnippet) => {
-    onInsertSnippet(snippet.content);
+    // Check if content is already HTML (has tags) or plain text
+    const isHtml = /<[a-z][\s\S]*>/i.test(snippet.content);
+    
+    if (isHtml) {
+      // Already HTML, insert directly
+      onInsertSnippet(snippet.content);
+    } else {
+      // Plain text - convert newlines to proper HTML paragraphs
+      const htmlContent = snippet.content
+        .split('\n')
+        .map(line => line.trim() ? `<p>${line}</p>` : '<p><br></p>')
+        .join('');
+      onInsertSnippet(htmlContent);
+    }
   };
 
   const handleSaveAsNote = () => {
