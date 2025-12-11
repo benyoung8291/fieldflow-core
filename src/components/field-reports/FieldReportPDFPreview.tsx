@@ -140,11 +140,9 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
       <div ref={containerRef} className="flex-1 overflow-auto p-4">
         <BlobProvider document={pdfDocument!}>
           {({ blob, loading, error }) => {
-            // Store blob for download
-            if (blob && blob !== currentBlob) {
-              setCurrentBlob(blob);
-            }
-
+            // Use effect-like pattern to store blob without causing render issues
+            // This is handled via the BlobHandler component below
+            
             if (loading) {
               return (
                 <div className="h-full flex items-center justify-center">
@@ -165,6 +163,12 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
             }
 
             if (!blob) return null;
+
+            // Store blob for download - using a ref check to avoid setting during render
+            if (blob !== currentBlob) {
+              // Schedule state update for next tick to avoid render-phase updates
+              setTimeout(() => setCurrentBlob(blob), 0);
+            }
 
             const blobUrl = URL.createObjectURL(blob);
 
