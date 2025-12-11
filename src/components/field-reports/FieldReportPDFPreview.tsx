@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { BlobProvider } from '@react-pdf/renderer';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from '@/components/ui/button';
-import { Loader2, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, ZoomIn, ZoomOut, Download } from 'lucide-react';
 import { FieldReportPDFDocument } from './FieldReportPDFDocument';
+import { saveAs } from 'file-saver';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -23,9 +24,8 @@ interface FieldReportPDFPreviewProps {
 
 export function FieldReportPDFPreview({ report, companySettings }: FieldReportPDFPreviewProps) {
   const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [scale, setScale] = useState<number>(0.8);
-  const [containerWidth, setContainerWidth] = useState<number>(400);
+  const [scale, setScale] = useState<number>(0.7);
+  const [currentBlob, setCurrentBlob] = useState<Blob | null>(null);
 
   // Memoize the PDF document to prevent unnecessary re-renders
   const pdfDocument = useMemo(() => {
@@ -47,15 +47,6 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
-    setCurrentPage(1);
-  };
-
-  const goToPrevPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
-  };
-
-  const goToNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, numPages));
   };
 
   const zoomIn = () => {
@@ -63,7 +54,14 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
   };
 
   const zoomOut = () => {
-    setScale((prev) => Math.max(prev - 0.1, 0.4));
+    setScale((prev) => Math.max(prev - 0.1, 0.3));
+  };
+
+  const handleDownload = () => {
+    if (currentBlob && report) {
+      const reportNumber = report.report_number?.replace(/^FR-DRAFT-/, 'FR-').replace(/^DRAFT-/, '') || 'Report';
+      saveAs(currentBlob, `Service-Report-${reportNumber}.pdf`);
+    }
   };
 
   if (!report || !companySettings) {
@@ -78,35 +76,25 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
     <div className="h-full flex flex-col bg-muted/30">
       {/* Controls */}
       <div className="flex items-center justify-between p-2 border-b bg-background">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={goToPrevPage}
-            disabled={currentPage <= 1}
-            className="h-8 w-8"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm px-2 min-w-[80px] text-center">
-            {numPages > 0 ? `${currentPage} / ${numPages}` : '-'}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={goToNextPage}
-            disabled={currentPage >= numPages}
-            className="h-8 w-8"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDownload}
+          disabled={!currentBlob}
+          className="h-8 gap-1.5"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Download
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {numPages > 0 ? `${numPages} page${numPages > 1 ? 's' : ''}` : ''}
+        </span>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={zoomOut}
-            disabled={scale <= 0.4}
+            disabled={scale <= 0.3}
             className="h-8 w-8"
           >
             <ZoomOut className="h-4 w-4" />
@@ -126,10 +114,15 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
         </div>
       </div>
 
-      {/* PDF Preview */}
+      {/* PDF Preview - Stacked Scrollable Pages */}
       <div className="flex-1 overflow-auto p-4">
         <BlobProvider document={pdfDocument!}>
           {({ blob, loading, error }) => {
+            // Store blob for download
+            if (blob && blob !== currentBlob) {
+              setCurrentBlob(blob);
+            }
+
             if (loading) {
               return (
                 <div className="h-full flex items-center justify-center">
@@ -154,7 +147,7 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
             const blobUrl = URL.createObjectURL(blob);
 
             return (
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-4">
                 <Document
                   file={blobUrl}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -169,13 +162,17 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
                     </div>
                   }
                 >
-                  <Page
-                    pageNumber={currentPage}
-                    scale={scale}
-                    className="shadow-lg"
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                  />
+                  {/* Render all pages stacked vertically */}
+                  {Array.from({ length: numPages }, (_, index) => (
+                    <Page
+                      key={`page_${index + 1}`}
+                      pageNumber={index + 1}
+                      scale={scale}
+                      className="shadow-lg mb-4"
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                    />
+                  ))}
                 </Document>
               </div>
             );
