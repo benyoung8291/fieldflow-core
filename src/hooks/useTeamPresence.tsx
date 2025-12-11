@@ -75,8 +75,9 @@ export const useTeamPresence = () => {
       } = await supabase.auth.getUser();
       if (!user) return null;
 
+      // Use profiles_safe view to avoid exposing sensitive payroll data
       const { data: profile } = await supabase
-        .from("profiles")
+        .from("profiles_safe")
         .select("first_name, last_name, avatar_url")
         .eq("id", user.id)
         .single();

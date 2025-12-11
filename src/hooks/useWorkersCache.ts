@@ -12,8 +12,9 @@ export const useWorkersCache = () => {
   return useQuery({
     queryKey: ["workers-cache"],
     queryFn: async () => {
+      // Use profiles_safe view to avoid exposing sensitive payroll data
       const { data, error } = await supabase
-        .from("profiles")
+        .from("profiles_safe")
         .select("id, first_name, last_name")
         .eq("is_active", true)
         .order("first_name");
