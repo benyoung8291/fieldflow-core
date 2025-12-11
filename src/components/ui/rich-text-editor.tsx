@@ -1,7 +1,31 @@
-import React, { useMemo } from 'react';
-import ReactQuill from 'react-quill';
+import React, { useMemo, useEffect } from 'react';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { cn } from '@/lib/utils';
+
+// Custom Blot to preserve raw HTML (like card snippets)
+const BlockEmbed = Quill.import('blots/block/embed');
+
+class KeepHTMLBlot extends BlockEmbed {
+  static blotName = 'keepHTML';
+  static tagName = 'div';
+  static className = 'ql-keep-html';
+
+  static create(value: string) {
+    const node = super.create() as HTMLElement;
+    node.innerHTML = value;
+    node.setAttribute('contenteditable', 'false');
+    node.setAttribute('data-keep-html', 'true');
+    return node;
+  }
+
+  static value(node: HTMLElement) {
+    return node.innerHTML;
+  }
+}
+
+// Register the custom blot
+Quill.register(KeepHTMLBlot, true);
 
 interface RichTextEditorProps {
   value: string;
@@ -76,6 +100,7 @@ export const RichTextEditor = React.forwardRef<ReactQuill, RichTextEditorProps>(
       'blockquote',
       'link',
       'image',
+      'keepHTML',
     ];
 
     return (
