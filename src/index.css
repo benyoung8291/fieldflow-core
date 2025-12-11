@@ -477,13 +477,18 @@ All colors MUST be HSL.
   user-select: none;
   cursor: default;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   transition: outline 0.15s ease;
 }
 
 .rich-text-editor .ql-editor .ql-keep-html:hover {
   outline: 2px solid hsl(var(--primary) / 0.4);
+}
+
+.rich-text-editor .ql-editor .ql-keep-html .ql-keep-html-content {
+  overflow: hidden;
+  border-radius: 8px;
 }
 
 .rich-text-editor .ql-editor .ql-keep-html table {
@@ -515,6 +520,52 @@ All colors MUST be HSL.
 
 .rich-text-editor .ql-editor .ql-keep-html li {
   margin-bottom: 2px !important;
+}
+
+/* Delete button for card snippets */
+.ql-keep-html-delete {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  border: 2px solid hsl(var(--background));
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  line-height: 1;
+  padding: 0;
+}
+
+.rich-text-editor .ql-editor .ql-keep-html:hover .ql-keep-html-delete {
+  display: flex;
+}
+
+.ql-keep-html-delete:hover {
+  background: hsl(var(--destructive) / 0.9);
+  transform: scale(1.1);
+}
+
+/* Email composer editor scrolling fix */
+.email-composer-editor .ql-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.email-composer-editor .ql-editor {
+  overflow-y: auto !important;
+  flex: 1;
+  min-height: 0;
 }
 /* Safe area utilities for mobile devices */
 @layer utilities {

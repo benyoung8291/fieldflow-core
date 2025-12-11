@@ -203,18 +203,18 @@ export function SnippetInserter({ ticketId, onInsertSnippet, onOpenSnippetManage
       return `<pre style="font-family: inherit; white-space: pre-wrap; margin: 0;">${text}</pre>`;
     }
 
-    // Card format - email-client friendly HTML with explicit border styling
+    // Card format - email-client friendly HTML with explicit border styling (compact for editor display)
     let html = `
-      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 16px 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <table cellpadding="0" cellspacing="0" border="0" width="360" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 8px 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
         <tr>
-          <td style="padding: 20px;">
+          <td style="padding: 12px;">
             <table cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td style="border-left: 4px solid #3b82f6; padding-left: 12px; padding-bottom: 16px;">
-                  <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 600; color: #111827;">
+                <td style="border-left: 3px solid #3b82f6; padding-left: 10px; padding-bottom: 10px;">
+                  <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 600; color: #111827;">
                     Service Order ${so.work_order_number}
                   </h3>
-                  <p style="margin: 0; font-size: 14px; color: #6b7280;">${so.title}</p>
+                  <p style="margin: 0; font-size: 12px; color: #6b7280;">${so.title}</p>
                 </td>
               </tr>
     `;
@@ -331,18 +331,18 @@ export function SnippetInserter({ ticketId, onInsertSnippet, onOpenSnippetManage
       return `<pre style="font-family: inherit; white-space: pre-wrap; margin: 0;">${text}</pre>`;
     }
 
-    // Card format with table for better email compatibility
+    // Card format with table for better email compatibility (compact for editor display)
     let html = `
-      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 16px 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <table cellpadding="0" cellspacing="0" border="0" width="360" style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 8px 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
         <tr>
-          <td style="padding: 20px;">
+          <td style="padding: 12px;">
             <table cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td style="border-left: 4px solid #10b981; padding-left: 12px; padding-bottom: 16px;">
-                  <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 600; color: #111827;">
+                <td style="border-left: 3px solid #10b981; padding-left: 10px; padding-bottom: 10px;">
+                  <h3 style="margin: 0 0 2px 0; font-size: 14px; font-weight: 600; color: #111827;">
                     📅 ${apt.title}
                   </h3>
-                  <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                  <p style="margin: 0; font-size: 12px; color: #6b7280;">
                     ${formatDate(new Date(apt.start_time), 'PPp')} - ${formatDate(new Date(apt.end_time), 'p')}
                   </p>
                 </td>
