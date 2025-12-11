@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X, Camera, ZoomIn, Plus, Loader2 } from 'lucide-react';
+import { X, Camera, ZoomIn, Plus, Loader2, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -38,8 +38,12 @@ export function ContractorPhotoUpload({
   );
   const [uploadProgress, setUploadProgress] = useState<Map<string, { stage: 'compressing' | 'uploading', progress: number }>>(new Map());
   const [viewingPhoto, setViewingPhoto] = useState<{ preview: string; notes: string; index: number } | null>(null);
-  const afterInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
-  const beforeInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  
+  // Separate refs for camera and gallery inputs
+  const beforeCameraRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const beforeGalleryRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const afterCameraRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const afterGalleryRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   const compressImage = async (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -97,14 +101,13 @@ export function ContractorPhotoUpload({
   };
 
   const uploadToStorage = async (file: File): Promise<string> => {
-    // Sanitize filename - replace spaces and special characters with dashes
     const sanitizedName = file.name
       .replace(/[^a-zA-Z0-9.-]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
     
     const fileName = `contractor/${token}/${Date.now()}-${sanitizedName}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('field-report-photos')
       .upload(fileName, file, { upsert: true });
     
@@ -136,26 +139,21 @@ export function ContractorPhotoUpload({
             return null;
           }
           
-          // Update compression progress
           setUploadProgress(prev => new Map(prev).set(slotKey, { 
             stage: 'compressing', 
             progress: Math.round((fileIndex / totalFiles) * 30) 
           }));
           
-          // Compress image
           const compressed = await compressImage(file);
           
-          // Update to uploading stage
           setUploadProgress(prev => new Map(prev).set(slotKey, { 
             stage: 'uploading', 
             progress: 30 + Math.round((processedCount / totalFiles) * 70) 
           }));
           
-          // Upload to storage immediately (background upload)
           const fileUrl = await uploadToStorage(compressed);
           processedCount++;
           
-          // Update upload progress
           setUploadProgress(prev => new Map(prev).set(slotKey, { 
             stage: 'uploading', 
             progress: 30 + Math.round((processedCount / totalFiles) * 70) 
@@ -181,24 +179,21 @@ export function ContractorPhotoUpload({
       }
 
       const updatedPairs = [...pairs];
-      let currentPairIndex = updatedPairs.findIndex(p => p.id === pairId);
+      const currentPairIndex = updatedPairs.findIndex(p => p.id === pairId);
       
       validFiles.forEach((fileData, index) => {
         if (index === 0) {
-          // First file goes into the selected slot
           if (type === 'before') {
             updatedPairs[currentPairIndex].before = { ...fileData, notes: '' };
           } else {
             updatedPairs[currentPairIndex].after = { ...fileData, notes: '' };
           }
           
-          // Auto-create new row if this pair is now complete and no empty row exists
           const hasEmptyPair = updatedPairs.some(p => !p.before && !p.after);
           if (updatedPairs[currentPairIndex].before && updatedPairs[currentPairIndex].after && !hasEmptyPair) {
             updatedPairs.push({ id: crypto.randomUUID() });
           }
         } else {
-          // Additional files create new pairs
           const newPair: PhotoPair = { id: crypto.randomUUID() };
           if (type === 'before') {
             newPair.before = { ...fileData, notes: '' };
@@ -250,7 +245,6 @@ export function ContractorPhotoUpload({
       return p;
     });
     
-    // Filter empty pairs but keep at least one
     const filtered = updatedPairs.filter(p => p.before || p.after || updatedPairs.length === 1);
     
     setPairs(filtered.length > 0 ? filtered : [{ id: crypto.randomUUID() }]);
@@ -274,7 +268,6 @@ export function ContractorPhotoUpload({
   };
 
   const addNewPair = () => {
-    // Check if there's already an empty pair (no before AND no after)
     const hasEmptyPair = pairs.some(p => !p.before && !p.after);
     if (hasEmptyPair) {
       toast.info('Please fill the empty row before adding another');
@@ -289,7 +282,6 @@ export function ContractorPhotoUpload({
 
   const removeRow = (pairId: string) => {
     const updatedPairs = pairs.filter(p => p.id !== pairId);
-    // Ensure at least one row remains
     if (updatedPairs.length === 0) {
       updatedPairs.push({ id: crypto.randomUUID() });
     }
@@ -299,7 +291,8 @@ export function ContractorPhotoUpload({
 
   const renderPhotoSlot = (pair: PhotoPair, index: number, type: 'before' | 'after') => {
     const photo = type === 'before' ? pair.before : pair.after;
-    const inputRefs = type === 'before' ? beforeInputRefs : afterInputRefs;
+    const cameraRefs = type === 'before' ? beforeCameraRefs : afterCameraRefs;
+    const galleryRefs = type === 'before' ? beforeGalleryRefs : afterGalleryRefs;
     const slotKey = `${pair.id}-${type}`;
     const progressInfo = uploadProgress.get(slotKey);
     const isUploading = !!progressInfo;
@@ -310,12 +303,21 @@ export function ContractorPhotoUpload({
           {type === 'before' ? 'Before' : 'After'} #{index + 1}
         </div>
         
+        {/* Camera input - with capture attribute */}
         <input
-          ref={el => inputRefs.current[pair.id] = el}
+          ref={el => cameraRefs.current[pair.id] = el}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => handleFileSelect(pair.id, type, e.target.files)}
+        />
+        {/* Gallery input - no capture attribute */}
+        <input
+          ref={el => galleryRefs.current[pair.id] = el}
           type="file"
           accept="image/*"
           multiple
-          capture="environment"
           className="hidden"
           onChange={(e) => handleFileSelect(pair.id, type, e.target.files)}
         />
@@ -372,17 +374,30 @@ export function ContractorPhotoUpload({
           <div
             onDrop={(e) => handleDrop(e, pair.id, type)}
             onDragOver={handleDragOver}
-            className="border-2 border-dashed rounded-lg h-48 flex flex-col items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors"
-            onClick={() => inputRefs.current[pair.id]?.click()}
+            className="border-2 border-dashed rounded-lg h-48 flex flex-col items-center justify-center gap-3 p-3"
           >
-            <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
-            <div className="text-sm text-center">
-              <div className="font-medium">Drop images or click</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                <Camera className="h-3 w-3 inline mr-1" />
-                Supports multiple selection
-              </div>
+            <div className="text-sm text-muted-foreground">Add {type} photo</div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => cameraRefs.current[pair.id]?.click()}
+              >
+                <Camera className="h-4 w-4 mr-1" />
+                Camera
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => galleryRefs.current[pair.id]?.click()}
+              >
+                <ImageIcon className="h-4 w-4 mr-1" />
+                Gallery
+              </Button>
             </div>
+            <div className="text-xs text-muted-foreground">Or drag & drop</div>
           </div>
         )}
       </div>
@@ -401,7 +416,6 @@ export function ContractorPhotoUpload({
             {renderPhotoSlot(pair, index, 'before')}
             {renderPhotoSlot(pair, index, 'after')}
             
-            {/* Remove row button - only show if row is empty AND there's more than one row */}
             {!pair.before && !pair.after && pairs.length > 1 && (
               <Button
                 type="button"
@@ -427,7 +441,6 @@ export function ContractorPhotoUpload({
         Add Another Photo Pair
       </Button>
 
-      {/* Photo Viewer Dialog */}
       <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
         <DialogContent className="max-w-4xl">
           <DialogTitle>Photo #{viewingPhoto?.index}</DialogTitle>

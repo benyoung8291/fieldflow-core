@@ -1,21 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X, Camera, Image as ImageIcon, ZoomIn, Plus } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, ZoomIn, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useNativeCamera, photoToFile } from '@/hooks/useNativeCamera';
 
 interface PhotoPair {
   id: string;
   before?: {
-    fileUrl: string; // Uploaded URL
+    fileUrl: string;
     preview: string;
     notes: string;
     fileName: string;
   };
   after?: {
-    fileUrl: string; // Uploaded URL
+    fileUrl: string;
     preview: string;
     notes: string;
     fileName: string;
@@ -36,8 +37,15 @@ export default function BeforeAfterPhotoUpload({
   const [pairs, setPairs] = useState<PhotoPair[]>(initialPairs.length > 0 ? initialPairs : [{ id: crypto.randomUUID() }]);
   const [loading, setLoading] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<{ preview: string; notes: string; index: number } | null>(null);
-  const afterInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
-  const beforeInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  
+  // Separate refs for camera and gallery inputs
+  const beforeCameraRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const beforeGalleryRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const afterCameraRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const afterGalleryRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  
+  // Native camera hook
+  const { takePhoto: nativeTakePhoto, pickFromGallery: nativePickGallery, isAvailable: isNativeAvailable } = useNativeCamera();
 
   // Sync pairs with initialPairs when they change (e.g., draft restored from localStorage)
   useEffect(() => {
@@ -47,7 +55,6 @@ export default function BeforeAfterPhotoUpload({
   }, [initialPairs]);
 
   // ALWAYS load before photos from appointment when appointmentId is provided
-  // Then merge with any existing after photos from draft (initialPairs)
   useEffect(() => {
     if (appointmentId) {
       loadBeforePhotosAndMerge();
@@ -69,7 +76,6 @@ export default function BeforeAfterPhotoUpload({
       if (error) throw error;
 
       if (attachments && attachments.length > 0) {
-        // Create pairs from before photos
         const loadedPairs: PhotoPair[] = attachments.map((attachment) => ({
           id: attachment.id,
           before: {
@@ -80,7 +86,6 @@ export default function BeforeAfterPhotoUpload({
           },
         }));
         
-        // Merge with any existing after photos from initialPairs (draft data)
         if (initialPairs.length > 0) {
           initialPairs.forEach((existingPair, index) => {
             if (existingPair.after && loadedPairs[index]) {
@@ -157,7 +162,7 @@ export default function BeforeAfterPhotoUpload({
 
   const uploadToStorage = async (file: File): Promise<string> => {
     const fileName = `${Date.now()}-${file.name}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('field-report-photos')
       .upload(fileName, file);
     
@@ -170,6 +175,65 @@ export default function BeforeAfterPhotoUpload({
       .getPublicUrl(fileName);
     
     return publicUrl;
+  };
+
+  const processAndUploadFile = async (pairId: string, type: 'before' | 'after', file: File) => {
+    try {
+      toast.info('Processing and uploading image...');
+      
+      const compressed = await compressImage(file);
+      const fileUrl = await uploadToStorage(compressed);
+      
+      const fileData = { 
+        fileUrl, 
+        preview: fileUrl, 
+        fileName: file.name,
+        notes: ''
+      };
+
+      const updatedPairs = [...pairs];
+      const currentPairIndex = updatedPairs.findIndex(p => p.id === pairId);
+      
+      if (currentPairIndex === -1) return;
+      
+      if (type === 'before') {
+        updatedPairs[currentPairIndex].before = fileData;
+      } else {
+        updatedPairs[currentPairIndex].after = fileData;
+      }
+      
+      if (!appointmentId && updatedPairs[currentPairIndex].before && updatedPairs[currentPairIndex].after) {
+        updatedPairs.push({ id: crypto.randomUUID() });
+      }
+
+      setPairs(updatedPairs);
+      onPhotosChange(updatedPairs);
+      toast.success('Image uploaded');
+    } catch (error) {
+      console.error('Error processing image:', error);
+      toast.error('Failed to upload image');
+    }
+  };
+
+  // Native camera handlers
+  const handleNativeTakePhoto = async (pairId: string, type: 'before' | 'after') => {
+    const photo = await nativeTakePhoto();
+    if (photo) {
+      const file = await photoToFile(photo);
+      if (file) {
+        await processAndUploadFile(pairId, type, file);
+      }
+    }
+  };
+
+  const handleNativePickGallery = async (pairId: string, type: 'before' | 'after') => {
+    const photo = await nativePickGallery();
+    if (photo) {
+      const file = await photoToFile(photo);
+      if (file) {
+        await processAndUploadFile(pairId, type, file);
+      }
+    }
   };
 
   const handleFileSelect = async (pairId: string, type: 'before' | 'after', files: FileList | null) => {
@@ -185,10 +249,7 @@ export default function BeforeAfterPhotoUpload({
             return null;
           }
           
-          // Compress image
           const compressed = await compressImage(file);
-          
-          // Upload to storage immediately (background upload)
           const fileUrl = await uploadToStorage(compressed);
           
           return { 
@@ -204,23 +265,20 @@ export default function BeforeAfterPhotoUpload({
       if (validFiles.length === 0) return;
 
       const updatedPairs = [...pairs];
-      let currentPairIndex = updatedPairs.findIndex(p => p.id === pairId);
+      const currentPairIndex = updatedPairs.findIndex(p => p.id === pairId);
       
       validFiles.forEach((fileData, index) => {
         if (index === 0) {
-          // First file goes into the selected slot
           if (type === 'before') {
             updatedPairs[currentPairIndex].before = { ...fileData, notes: '' };
           } else {
             updatedPairs[currentPairIndex].after = { ...fileData, notes: '' };
           }
           
-          // Auto-create new row if this pair is now complete (only when not from appointment)
           if (!appointmentId && updatedPairs[currentPairIndex].before && updatedPairs[currentPairIndex].after) {
             updatedPairs.push({ id: crypto.randomUUID() });
           }
         } else {
-          // Additional files create new pairs (only when not from appointment)
           if (!appointmentId) {
             const newPair: PhotoPair = { id: crypto.randomUUID() };
             if (type === 'before') {
@@ -257,7 +315,6 @@ export default function BeforeAfterPhotoUpload({
   const removePhoto = async (pairId: string, type: 'before' | 'after') => {
     const pair = pairs.find(p => p.id === pairId);
     
-    // Delete from database if it's an after photo
     if (type === 'after' && pair?.after?.fileUrl) {
       try {
         const { error } = await supabase
@@ -267,13 +324,9 @@ export default function BeforeAfterPhotoUpload({
         
         if (error) {
           console.error('Error deleting photo from database:', error);
-          toast.error('Failed to delete photo');
-          return;
         }
       } catch (error) {
         console.error('Error deleting photo:', error);
-        toast.error('Failed to delete photo');
-        return;
       }
     }
     
@@ -290,7 +343,6 @@ export default function BeforeAfterPhotoUpload({
       return p;
     });
     
-    // When from appointment, keep all pairs. Otherwise filter empty ones
     const filtered = appointmentId 
       ? updatedPairs
       : updatedPairs.filter(p => p.before || p.after || updatedPairs.length === 1);
@@ -330,7 +382,6 @@ export default function BeforeAfterPhotoUpload({
     );
   }
 
-  // When from appointment and no before photos available
   if (appointmentId && pairs.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -349,7 +400,7 @@ export default function BeforeAfterPhotoUpload({
         </div>
       ) : (
         <div className="text-sm text-muted-foreground mb-2">
-          Upload before photos on the left, after photos on the right. Drag & drop or click to select multiple images.
+          Upload before photos on the left, after photos on the right.
         </div>
       )}
       
@@ -361,15 +412,24 @@ export default function BeforeAfterPhotoUpload({
               <div className="text-xs font-medium text-muted-foreground">Before #{index + 1}</div>
               
               {!appointmentId && (
-                <input
-                  ref={el => beforeInputRefs.current[pair.id] = el}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => handleFileSelect(pair.id, 'before', e.target.files)}
-                />
+                <>
+                  <input
+                    ref={el => beforeCameraRefs.current[pair.id] = el}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => handleFileSelect(pair.id, 'before', e.target.files)}
+                  />
+                  <input
+                    ref={el => beforeGalleryRefs.current[pair.id] = el}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleFileSelect(pair.id, 'before', e.target.files)}
+                  />
+                </>
               )}
               
               {pair.before ? (
@@ -420,17 +480,36 @@ export default function BeforeAfterPhotoUpload({
                   <div
                     onDrop={(e) => handleDrop(e, pair.id, 'before')}
                     onDragOver={handleDragOver}
-                    className="border-2 border-dashed rounded-lg h-48 flex flex-col items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => beforeInputRefs.current[pair.id]?.click()}
+                    className="border-2 border-dashed rounded-lg h-48 flex flex-col items-center justify-center gap-3 p-3"
                   >
-                    <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
-                    <div className="text-sm text-center">
-                      <div className="font-medium">Drop images or click</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <Camera className="h-3 w-3 inline mr-1" />
-                        Supports multiple selection
-                      </div>
+                    <div className="text-sm text-muted-foreground">Add before photo</div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => isNativeAvailable 
+                          ? handleNativeTakePhoto(pair.id, 'before') 
+                          : beforeCameraRefs.current[pair.id]?.click()
+                        }
+                      >
+                        <Camera className="h-4 w-4 mr-1" />
+                        Camera
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => isNativeAvailable
+                          ? handleNativePickGallery(pair.id, 'before')
+                          : beforeGalleryRefs.current[pair.id]?.click()
+                        }
+                      >
+                        <ImageIcon className="h-4 w-4 mr-1" />
+                        Gallery
+                      </Button>
                     </div>
+                    <div className="text-xs text-muted-foreground">Or drag & drop</div>
                   </div>
                 )
               )}
@@ -439,12 +518,20 @@ export default function BeforeAfterPhotoUpload({
             {/* After Photo */}
             <div className="space-y-2">
               <div className="text-xs font-medium text-muted-foreground">After #{index + 1}</div>
+              
               <input
-                ref={el => afterInputRefs.current[pair.id] = el}
+                ref={el => afterCameraRefs.current[pair.id] = el}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handleFileSelect(pair.id, 'after', e.target.files)}
+              />
+              <input
+                ref={el => afterGalleryRefs.current[pair.id] = el}
                 type="file"
                 accept="image/*"
                 multiple={!appointmentId}
-                capture="environment"
                 className="hidden"
                 onChange={(e) => handleFileSelect(pair.id, 'after', e.target.files)}
               />
@@ -478,17 +565,36 @@ export default function BeforeAfterPhotoUpload({
                 <div
                   onDrop={(e) => handleDrop(e, pair.id, 'after')}
                   onDragOver={handleDragOver}
-                  className="border-2 border-dashed rounded-lg h-48 flex flex-col items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={() => afterInputRefs.current[pair.id]?.click()}
+                  className="border-2 border-dashed rounded-lg h-48 flex flex-col items-center justify-center gap-3 p-3"
                 >
-                  <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
-                  <div className="text-sm text-center">
-                    <div className="font-medium">Drop images or click</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      <Camera className="h-3 w-3 inline mr-1" />
-                      {appointmentId ? 'Upload matching after photo' : 'Supports multiple selection'}
-                    </div>
+                  <div className="text-sm text-muted-foreground">Add after photo</div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => isNativeAvailable 
+                        ? handleNativeTakePhoto(pair.id, 'after') 
+                        : afterCameraRefs.current[pair.id]?.click()
+                      }
+                    >
+                      <Camera className="h-4 w-4 mr-1" />
+                      Camera
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => isNativeAvailable
+                        ? handleNativePickGallery(pair.id, 'after')
+                        : afterGalleryRefs.current[pair.id]?.click()
+                      }
+                    >
+                      <ImageIcon className="h-4 w-4 mr-1" />
+                      Gallery
+                    </Button>
                   </div>
+                  <div className="text-xs text-muted-foreground">Or drag & drop</div>
                 </div>
               )}
             </div>
@@ -508,7 +614,6 @@ export default function BeforeAfterPhotoUpload({
         </Button>
       )}
 
-      {/* Image Viewer Dialog */}
       <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
         <DialogContent className="max-w-4xl w-full max-h-[90vh]">
           <DialogTitle>Before Photo #{viewingPhoto?.index}</DialogTitle>
