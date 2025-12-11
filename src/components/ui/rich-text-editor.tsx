@@ -1,17 +1,17 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { cn } from '@/lib/utils';
 
 // Custom Blot to preserve raw HTML (like card snippets)
-const BlockEmbed = Quill.import('blots/block/embed');
+const BlockEmbed = Quill.import('blots/block/embed') as any;
 
 class KeepHTMLBlot extends BlockEmbed {
   static blotName = 'keepHTML';
   static tagName = 'div';
   static className = 'ql-keep-html';
 
-  static create(value: string) {
+  static create(value: string): HTMLElement {
     const node = super.create() as HTMLElement;
     
     // Create content wrapper
@@ -23,9 +23,9 @@ class KeepHTMLBlot extends BlockEmbed {
     // Add delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'ql-keep-html-delete';
-    deleteBtn.innerHTML = '×';
+    deleteBtn.innerHTML = '\u00D7'; // × character
     deleteBtn.type = 'button';
-    deleteBtn.onclick = (e) => {
+    deleteBtn.onclick = (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       node.remove();
@@ -37,7 +37,7 @@ class KeepHTMLBlot extends BlockEmbed {
     return node;
   }
 
-  static value(node: HTMLElement) {
+  static value(node: HTMLElement): string {
     // Return only the content, not the delete button
     const contentWrapper = node.querySelector('.ql-keep-html-content');
     return contentWrapper ? contentWrapper.innerHTML : node.innerHTML;
