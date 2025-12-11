@@ -245,6 +245,17 @@ All colors MUST be HSL.
   @apply text-foreground;
 }
 
+/* Snippet card styles in rich text editor */
+.rich-text-editor .ql-editor table[style*="border"] {
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.rich-text-editor .ql-editor table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
 /* Safe area utilities for mobile devices */
 @layer utilities {
   .pb-safe {
