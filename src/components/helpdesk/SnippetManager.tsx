@@ -12,8 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, FileText } from "lucide-react";
+import { RichTextEditorLazy as RichTextEditor } from "@/components/ui/RichTextEditorLazy";
 import {
   Select,
   SelectContent,
@@ -221,11 +221,11 @@ export function SnippetManager({ open, onOpenChange }: SnippetManagerProps) {
 
               <div className="space-y-2">
                 <Label>Content</Label>
-                <Textarea
+                <RichTextEditor
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  onChange={(content) => setFormData({ ...formData, content })}
                   placeholder="Enter the snippet content..."
-                  className="min-h-[150px]"
+                  className="min-h-[150px] [&_.ql-editor]:min-h-[120px]"
                 />
               </div>
 

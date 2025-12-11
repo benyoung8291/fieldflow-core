@@ -65,6 +65,23 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
       }
     };
 
+    // Insert HTML snippet at cursor using Quill API
+    const handleInsertSnippetHtml = (html: string) => {
+      const editor = editorRef.current?.getEditor();
+      if (editor) {
+        const range = editor.getSelection(true);
+        const index = range ? range.index : editor.getLength() - 1;
+        editor.clipboard.dangerouslyPasteHTML(index, html);
+        // Move cursor to end of inserted content
+        setTimeout(() => {
+          editor.setSelection(editor.getLength(), 0);
+        }, 0);
+      } else {
+        // Fallback if editor ref not available
+        setBody(prev => prev + html);
+      }
+    };
+
     // Discard draft
     const handleDiscard = () => {
       setBody("");
@@ -505,7 +522,7 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
               {ticketId && (
                 <SnippetInserter 
                   ticketId={ticketId} 
-                  onInsertSnippet={(html) => setBody(prev => prev + html)}
+                  onInsertSnippet={handleInsertSnippetHtml}
                   onOpenSnippetManager={() => setSnippetManagerOpen(true)}
                 />
               )}
