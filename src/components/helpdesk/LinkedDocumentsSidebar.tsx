@@ -873,6 +873,8 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                       <DocumentLinkSearch
                         docType={docType.type}
                         ticketId={ticketId}
+                        customerId={ticket?.customer_id}
+                        linkedDocIds={linkedDocs?.map((d: any) => d.document_id) || []}
                         onLinked={() => {
                           setShowDocLinks({ ...showDocLinks, [docType.type]: false });
                           queryClient.invalidateQueries({ queryKey: ["helpdesk-linked-docs", ticketId] });
@@ -885,8 +887,6 @@ export function LinkedDocumentsSidebar({ ticketId, ticket, onClose }: LinkedDocu
                               value: customerId 
                             });
                           }
-                          
-                          // Contact linking now handled automatically via onCustomerContactLinked callback
                         }}
                       />
                     </div>
