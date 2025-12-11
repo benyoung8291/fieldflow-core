@@ -14,6 +14,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import type ReactQuill from "react-quill";
+interface InsertedCardSnippet {
+  id: string;
+  type: string;
+  documentId: string;
+  html: string;
+  title: string;
+}
+
 export interface EmailComposerRef {
   reset: () => void;
   insertContent: (html: string) => void;
@@ -51,6 +59,7 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
     const [snippetManagerOpen, setSnippetManagerOpen] = useState(false);
     const [saveSnippetDialogOpen, setSaveSnippetDialogOpen] = useState(false);
     const [includeSignature, setIncludeSignature] = useState(true);
+    const [insertedCards, setInsertedCards] = useState<InsertedCardSnippet[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const composerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<ReactQuill>(null);
@@ -66,19 +75,34 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
     };
 
     // Insert HTML snippet at cursor using Quill API
-    const handleInsertSnippetHtml = (html: string) => {
-      const editor = editorRef.current?.getEditor();
-      if (editor) {
-        const range = editor.getSelection(true);
-        const index = range ? range.index : editor.getLength() - 1;
-        editor.clipboard.dangerouslyPasteHTML(index, html);
-        // Move cursor to end of inserted content
-        setTimeout(() => {
-          editor.setSelection(editor.getLength(), 0);
-        }, 0);
+    const handleInsertSnippetHtml = (html: string, metadata?: { type: string; id: string; title: string }) => {
+      // Check if this is a card snippet (has table structure with border styling)
+      const isCardSnippet = /<table[^>]*style="[^"]*border[^"]*"/.test(html);
+      
+      if (isCardSnippet && metadata) {
+        // Add as a card snippet (rendered separately below editor)
+        setInsertedCards(prev => [...prev, {
+          id: crypto.randomUUID(),
+          type: metadata.type,
+          documentId: metadata.id,
+          html,
+          title: metadata.title
+        }]);
       } else {
-        // Fallback if editor ref not available
-        setBody(prev => prev + html);
+        // Regular content - insert via Quill
+        const editor = editorRef.current?.getEditor();
+        if (editor) {
+          const range = editor.getSelection(true);
+          const index = range ? range.index : editor.getLength() - 1;
+          editor.clipboard.dangerouslyPasteHTML(index, html);
+          // Move cursor to end of inserted content
+          setTimeout(() => {
+            editor.setSelection(editor.getLength(), 0);
+          }, 0);
+        } else {
+          // Fallback if editor ref not available
+          setBody(prev => prev + html);
+        }
       }
     };
 
@@ -90,6 +114,7 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
       setBcc("");
       setSubject(defaultSubject);
       setAttachments([]);
+      setInsertedCards([]);
       setIsExpanded(false);
     };
 
@@ -163,6 +188,7 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
         setShowCc(false);
         setShowBcc(false);
         setAttachments([]);
+        setInsertedCards([]);
       },
       insertContent: (html: string) => {
         setBody(prev => prev + html);
@@ -202,9 +228,15 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
 
       // Append signature to body if enabled
       const signature = getRenderedSignature();
-      const fullBody = signature 
+      let fullBody = signature 
         ? `${body}<br/><br/>--<br/>${signature}`
         : body;
+
+      // Append inserted card snippets
+      if (insertedCards.length > 0) {
+        const cardsHtml = insertedCards.map(card => card.html).join('<br/>');
+        fullBody = `${fullBody}<br/><br/>${cardsHtml}`;
+      }
 
       await onSend({ to, cc, bcc, subject, body: fullBody });
     };
@@ -412,6 +444,33 @@ export const EmailComposerEnhanced = forwardRef<EmailComposerRef, EmailComposerE
                 className="flex-1 h-full [&_.ql-toolbar]:rounded-none [&_.ql-toolbar]:border-x-0 [&_.ql-container]:rounded-none [&_.ql-container]:border-x-0 [&_.ql-container]:border-b-0"
               />
             </div>
+
+            {/* Inserted Card Snippets */}
+            {insertedCards.length > 0 && (
+              <div className="border-t px-4 py-3 space-y-3 bg-muted/20 max-h-[200px] overflow-y-auto shrink-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Attached Content ({insertedCards.length})
+                  </span>
+                </div>
+                {insertedCards.map((card) => (
+                  <div key={card.id} className="relative group">
+                    <div 
+                      className="border rounded-lg p-3 bg-background shadow-sm prose prose-sm max-w-none [&_table]:w-full [&_table]:border-collapse"
+                      dangerouslySetInnerHTML={{ __html: card.html }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 bg-background/80"
+                      onClick={() => setInsertedCards(prev => prev.filter(c => c.id !== card.id))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Signature Preview - compact */}
             {userProfile?.email_signature && includeSignature && (

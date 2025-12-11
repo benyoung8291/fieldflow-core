@@ -39,7 +39,7 @@ import { Label } from "@/components/ui/label";
 
 interface SnippetInserterProps {
   ticketId: string;
-  onInsertSnippet: (html: string) => void;
+  onInsertSnippet: (html: string, metadata?: { type: string; id: string; title: string }) => void;
   onOpenSnippetManager?: () => void;
 }
 
@@ -458,7 +458,11 @@ export function SnippetInserter({ ticketId, onInsertSnippet, onOpenSnippetManage
 
   const confirmInsert = () => {
     if (previewDialog?.html) {
-      onInsertSnippet(previewDialog.html);
+      onInsertSnippet(previewDialog.html, {
+        type: previewDialog.docType,
+        id: previewDialog.docId,
+        title: previewDialog.type
+      });
       setPreviewDialog(null);
     }
   };
