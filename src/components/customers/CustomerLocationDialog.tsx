@@ -47,8 +47,8 @@ export default function CustomerLocationDialog({
   const [contacts, setContacts] = useState<any[]>([]);
   const queryClient = useQueryClient();
   
-  const { register, handleSubmit, watch, setValue } = useForm<LocationFormData>({
-    defaultValues: location || {
+  const { register, handleSubmit, watch, setValue, reset } = useForm<LocationFormData>({
+    defaultValues: {
       name: "",
       address: "",
       city: "",
@@ -70,6 +70,45 @@ export default function CustomerLocationDialog({
   const address = watch("address");
   const facilityManagerId = watch("facility_manager_contact_id");
   const siteContactId = watch("site_contact_id");
+
+  // Reset form when dialog opens with location data
+  useEffect(() => {
+    if (open) {
+      if (location) {
+        reset({
+          name: location.name || "",
+          address: location.address || "",
+          city: location.city || "",
+          state: location.state || "",
+          postcode: location.postcode || "",
+          location_notes: location.location_notes || "",
+          customer_location_id: location.customer_location_id || "",
+          is_primary: location.is_primary || false,
+          is_active: location.is_active !== false,
+          latitude: location.latitude || null,
+          longitude: location.longitude || null,
+          facility_manager_contact_id: location.facility_manager_contact_id || "",
+          site_contact_id: location.site_contact_id || "",
+        });
+      } else {
+        reset({
+          name: "",
+          address: "",
+          city: "",
+          state: "",
+          postcode: "",
+          location_notes: "",
+          customer_location_id: "",
+          is_primary: false,
+          is_active: true,
+          latitude: null,
+          longitude: null,
+          facility_manager_contact_id: "",
+          site_contact_id: "",
+        });
+      }
+    }
+  }, [open, location, reset]);
 
   useEffect(() => {
     if (open && customerId) {
