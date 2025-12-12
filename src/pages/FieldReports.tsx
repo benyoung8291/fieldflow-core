@@ -199,7 +199,11 @@ export default function FieldReports() {
         />
       ).toBlob();
 
-      saveAs(blob, `Service-Report-${selectedReport.report_number}.pdf`);
+      const locationName = selectedReport.location?.name?.replace(/[^a-zA-Z0-9]/g, '-') || 'Location';
+      const dateStr = selectedReport.service_date 
+        ? format(new Date(selectedReport.service_date), 'ddMMyyyy')
+        : 'Report';
+      saveAs(blob, `${dateStr}-${locationName}.pdf`);
       toast.success('PDF downloaded successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);

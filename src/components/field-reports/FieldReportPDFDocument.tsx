@@ -437,6 +437,15 @@ const formatDate = (dateStr: string): string => {
   });
 };
 
+// Helper function to format date as ddMMyyyy
+const formatDateCompact = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}${month}${year}`;
+};
+
 // Helper function to clean report number
 const cleanReportNumber = (num: string): string => {
   // Remove DRAFT- prefix for customer-facing PDF
@@ -557,7 +566,9 @@ export function FieldReportPDFDocument({ report, companySettings }: FieldReportP
 
         {/* Title Section */}
         <View style={styles.titleSection}>
-          <Text style={styles.mainTitle}>Field Service Report</Text>
+          <Text style={styles.mainTitle}>
+            {report.service_date ? formatDateCompact(report.service_date) : 'Service Report'} - {report.location?.name || 'Service Location'}
+          </Text>
           <Text style={styles.subtitle}>
             Completed by {getServiceProvider(report)}
           </Text>
