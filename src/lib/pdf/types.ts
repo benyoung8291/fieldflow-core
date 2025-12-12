@@ -78,6 +78,17 @@ export interface DocumentData {
   payment_terms?: string;
   amount_paid?: number;
   balance_due?: number;
+  customer_id?: string;
+  invoice_description?: string;
+  
+  // Ship To (service location)
+  ship_to?: {
+    name: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+  };
   
   // Purchase Order specific
   delivery_date?: string;

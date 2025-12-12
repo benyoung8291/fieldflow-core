@@ -105,6 +105,8 @@ export default function InvoicePDFDownload({
       // Build source document references from line items
       let sourceServiceOrder = undefined;
       let sourceProject = undefined;
+      let invoiceDescription = '';
+      let shipTo = undefined;
       
       if (sourceDocuments && sourceDocuments.size > 0) {
         for (const [key, doc] of sourceDocuments) {
@@ -114,10 +116,25 @@ export default function InvoicePDFDownload({
               work_order_number: doc.work_order_number,
               purchase_order_number: doc.purchase_order_number,
             };
+            if (doc.description) {
+              invoiceDescription = doc.description;
+            }
+            if (doc.location) {
+              shipTo = {
+                name: doc.location.name || '',
+                address: doc.location.address || '',
+                city: doc.location.city || '',
+                state: doc.location.state || '',
+                postcode: doc.location.postcode || '',
+              };
+            }
           } else if (doc.type === "project" && !sourceProject) {
             sourceProject = {
               name: doc.name,
             };
+            if (!invoiceDescription && doc.name) {
+              invoiceDescription = doc.name;
+            }
           }
         }
       }
@@ -125,13 +142,17 @@ export default function InvoicePDFDownload({
       // Build document data
       const documentData: DocumentData = {
         document_number: invoiceNumber,
-        document_date: format(new Date(invoice.invoice_date), "dd MMM yyyy"),
-        due_date: invoice.due_date ? format(new Date(invoice.due_date), "dd MMM yyyy") : undefined,
+        document_date: invoice.invoice_date,
+        due_date: invoice.due_date || undefined,
         payment_terms: invoice.payment_terms || "Due on Receipt",
         subtotal: invoice.subtotal || 0,
         tax_amount: invoice.tax_amount || 0,
         total: invoice.total_amount || 0,
+        amount_paid: invoice.amount_paid || 0,
         notes: invoice.notes,
+        customer_id: customerInfo.acumatica_customer_id || customerInfo.id?.substring(0, 8)?.toUpperCase(),
+        invoice_description: invoiceDescription,
+        ship_to: shipTo,
         customer: {
           name: customerInfo.name || "",
           legal_name: customerInfo.legal_company_name,
@@ -143,6 +164,7 @@ export default function InvoicePDFDownload({
           state: customerInfo.state || "",
           postcode: customerInfo.postcode || "",
           email: customerInfo.email || "",
+          phone: customerInfo.billing_phone || customerInfo.phone || "",
           billing_email: customerInfo.billing_email,
           billing_phone: customerInfo.billing_phone,
         },
