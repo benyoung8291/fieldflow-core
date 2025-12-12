@@ -39,9 +39,10 @@ export const useAssignableWorkers = () => {
       if (workerUserIds.length === 0) return [];
 
       // Fetch profiles for those workers (same tenant, active)
+      // Use profiles_safe view to avoid RLS restrictions for supervisors
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, email, phone, worker_state")
+        .from("profiles_safe")
+        .select("id, first_name, last_name, email, phone, worker_state, tenant_id")
         .eq("tenant_id", profile.tenant_id)
         .eq("is_active", true)
         .in("id", workerUserIds)
