@@ -8893,6 +8893,10 @@ export type Database = {
           abn: string | null
           address_line_1: string | null
           address_line_2: string | null
+          bank_account_name: string | null
+          bank_account_number: string | null
+          bank_bsb: string | null
+          bank_name: string | null
           city: string | null
           company_email: string | null
           company_legal_name: string | null
@@ -8904,6 +8908,7 @@ export type Database = {
           default_tax_rate: number | null
           id: string
           logo_url: string | null
+          payment_instructions: string | null
           postcode: string | null
           primary_color: string | null
           projects_service_orders_integration: boolean | null
@@ -8917,6 +8922,10 @@ export type Database = {
           abn?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_bsb?: string | null
+          bank_name?: string | null
           city?: string | null
           company_email?: string | null
           company_legal_name?: string | null
@@ -8928,6 +8937,7 @@ export type Database = {
           default_tax_rate?: number | null
           id?: string
           logo_url?: string | null
+          payment_instructions?: string | null
           postcode?: string | null
           primary_color?: string | null
           projects_service_orders_integration?: boolean | null
@@ -8941,6 +8951,10 @@ export type Database = {
           abn?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_bsb?: string | null
+          bank_name?: string | null
           city?: string | null
           company_email?: string | null
           company_legal_name?: string | null
@@ -8952,6 +8966,7 @@ export type Database = {
           default_tax_rate?: number | null
           id?: string
           logo_url?: string | null
+          payment_instructions?: string | null
           postcode?: string | null
           primary_color?: string | null
           projects_service_orders_integration?: boolean | null

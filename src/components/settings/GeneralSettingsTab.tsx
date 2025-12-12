@@ -28,6 +28,12 @@ export default function GeneralSettingsTab() {
     primaryColor: "",
     secondaryColor: "",
     renewalEmail: "",
+    // Bank details for invoices
+    bankName: "",
+    bankBsb: "",
+    bankAccountNumber: "",
+    bankAccountName: "",
+    paymentInstructions: "",
   });
   const [serviceOrderLookaheadDays, setServiceOrderLookaheadDays] = useState<number>(30);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -79,6 +85,12 @@ export default function GeneralSettingsTab() {
         primaryColor: settings.primary_color || "",
         secondaryColor: settings.secondary_color || "",
         renewalEmail: settings.renewal_notification_email || "",
+        // Bank details
+        bankName: settings.bank_name || "",
+        bankBsb: settings.bank_bsb || "",
+        bankAccountNumber: settings.bank_account_number || "",
+        bankAccountName: settings.bank_account_name || "",
+        paymentInstructions: settings.payment_instructions || "",
       });
     }
   }, [settings]);
@@ -186,6 +198,12 @@ export default function GeneralSettingsTab() {
         primary_color: formData.primaryColor,
         secondary_color: formData.secondaryColor,
         renewal_notification_email: formData.renewalEmail,
+        // Bank details
+        bank_name: formData.bankName,
+        bank_bsb: formData.bankBsb,
+        bank_account_number: formData.bankAccountNumber,
+        bank_account_name: formData.bankAccountName,
+        payment_instructions: formData.paymentInstructions,
       };
 
       if (settings) {
@@ -516,6 +534,67 @@ export default function GeneralSettingsTab() {
               Number of days to look ahead when automatically generating service orders from contracts. 
               The system will generate service orders for any contract items scheduled within this period. 
               Runs daily at midnight. Default is 30 days.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Bank Details</CardTitle>
+          <CardDescription>
+            Payment details shown on invoices for customers
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="bank-name">Bank Name</Label>
+              <Input
+                id="bank-name"
+                placeholder="Commonwealth Bank"
+                value={formData.bankName}
+                onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bank-account-name">Account Name</Label>
+              <Input
+                id="bank-account-name"
+                placeholder="ABC Services Pty Ltd"
+                value={formData.bankAccountName}
+                onChange={(e) => setFormData({ ...formData, bankAccountName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bank-bsb">BSB</Label>
+              <Input
+                id="bank-bsb"
+                placeholder="062-000"
+                value={formData.bankBsb}
+                onChange={(e) => setFormData({ ...formData, bankBsb: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bank-account-number">Account Number</Label>
+              <Input
+                id="bank-account-number"
+                placeholder="12345678"
+                value={formData.bankAccountNumber}
+                onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="payment-instructions">Payment Instructions (Optional)</Label>
+            <Input
+              id="payment-instructions"
+              placeholder="Please use invoice number as payment reference"
+              value={formData.paymentInstructions}
+              onChange={(e) => setFormData({ ...formData, paymentInstructions: e.target.value })}
+            />
+            <p className="text-sm text-muted-foreground">
+              Additional instructions that will appear on invoices
             </p>
           </div>
         </CardContent>
