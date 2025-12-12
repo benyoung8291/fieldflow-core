@@ -58,6 +58,7 @@ const QuotePipeline = lazy(() => import("./pages/QuotePipeline"));
 const Tasks = lazy(() => import("./pages/Tasks"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Skills = lazy(() => import("./pages/Skills"));
+const WorkerAvailabilityCalendar = lazy(() => import("./pages/WorkerAvailabilityCalendar"));
 const TrainingMatrix = lazy(() => import("./pages/TrainingMatrix"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const InvoicesList = lazy(() => import("./pages/InvoicesList"));
@@ -427,6 +428,7 @@ const App = () => {
             <Route path="/workers" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/workers")}><Workers /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/workers/:id" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/workers")}><WorkerDetails /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/skills" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/skills")}><Skills /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
+            <Route path="/worker-availability-calendar" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/workers")}><WorkerAvailabilityCalendar /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/training-matrix" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/training-matrix")}><TrainingMatrix /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/analytics" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/analytics")}><Analytics /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
             <Route path="/financial-reconciliation" element={isAuthenticated ? <ProtectedRoute><PermissionProtectedRoute module={getRouteModule("/financial-reconciliation")}><FinancialReconciliation /></PermissionProtectedRoute></ProtectedRoute> : <Navigate to="/auth" replace />} />
