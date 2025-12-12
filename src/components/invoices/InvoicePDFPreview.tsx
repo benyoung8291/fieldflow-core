@@ -61,9 +61,11 @@ export function InvoicePDFPreview({
     
     const customer = customerInfo || invoice.customers || {};
     
-    // Build source references
+    // Build source references and extract description/location
     let sourceServiceOrder = undefined;
     let sourceProject = undefined;
+    let invoiceDescription = '';
+    let shipTo = undefined;
     
     if (sourceDocuments && sourceDocuments.size > 0) {
       for (const [, doc] of sourceDocuments) {
@@ -73,25 +75,42 @@ export function InvoicePDFPreview({
             work_order_number: doc.work_order_number,
             purchase_order_number: doc.purchase_order_number,
           };
+          // Use service order description as invoice description
+          if (doc.description) {
+            invoiceDescription = doc.description;
+          }
+          // Get location from service order
+          if (doc.location) {
+            shipTo = {
+              name: doc.location.name || '',
+              address: doc.location.address || '',
+              city: doc.location.city || '',
+              state: doc.location.state || '',
+              postcode: doc.location.postcode || '',
+            };
+          }
         } else if (doc.type === "project" && !sourceProject) {
           sourceProject = { name: doc.name };
+          if (!invoiceDescription && doc.name) {
+            invoiceDescription = doc.name;
+          }
         }
       }
     }
 
     return {
       document_number: invoice.invoice_number || '',
-      document_date: invoice.invoice_date 
-        ? new Date(invoice.invoice_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
-        : '',
-      due_date: invoice.due_date 
-        ? new Date(invoice.due_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
-        : undefined,
+      document_date: invoice.invoice_date || new Date().toISOString(),
+      due_date: invoice.due_date || undefined,
       payment_terms: invoice.payment_terms || "Due on Receipt",
       subtotal: invoice.subtotal || 0,
       tax_amount: invoice.tax_amount || 0,
       total: invoice.total_amount || 0,
+      amount_paid: invoice.amount_paid || 0,
       notes: invoice.notes,
+      customer_id: customer.acumatica_customer_id || customer.id?.substring(0, 8)?.toUpperCase(),
+      invoice_description: invoiceDescription,
+      ship_to: shipTo,
       customer: {
         name: customer.name || "",
         legal_name: customer.legal_company_name,
@@ -103,6 +122,7 @@ export function InvoicePDFPreview({
         state: customer.state || "",
         postcode: customer.postcode || "",
         email: customer.email || "",
+        phone: customer.billing_phone || customer.phone || "",
         billing_email: customer.billing_email,
         billing_phone: customer.billing_phone,
       },
