@@ -13,8 +13,10 @@ export interface LineItem {
 
 export interface CompanySettings {
   company_name?: string;
+  company_legal_name?: string;
   logo_url?: string;
   address?: string;
+  address_line_2?: string;
   city?: string;
   state?: string;
   postcode?: string;
@@ -23,10 +25,18 @@ export interface CompanySettings {
   website?: string;
   abn?: string;
   default_tax_rate?: number;
+  // Bank details for invoices
+  bank_name?: string;
+  bank_bsb?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
+  payment_instructions?: string;
 }
 
 export interface CustomerInfo {
   name: string;
+  legal_name?: string;
+  trading_name?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -35,6 +45,8 @@ export interface CustomerInfo {
   postcode?: string;
   abn?: string;
   contact_name?: string;
+  billing_email?: string;
+  billing_phone?: string;
 }
 
 export interface SupplierInfo {
@@ -92,6 +104,16 @@ export interface DocumentData {
   location?: {
     name: string;
     address?: string;
+  };
+  
+  // Source document references (for invoices from service orders/projects)
+  source_service_order?: {
+    order_number: string;
+    work_order_number?: string;
+    purchase_order_number?: string;
+  };
+  source_project?: {
+    name: string;
   };
 }
 

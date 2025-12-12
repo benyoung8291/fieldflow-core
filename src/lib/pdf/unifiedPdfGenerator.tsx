@@ -323,7 +323,7 @@ const QuoteDocument: React.FC<{
   );
 };
 
-// Invoice Document Component
+// Invoice Document Component - Australian Tax Invoice with full details
 const InvoiceDocument: React.FC<{
   data: DocumentData;
   lineItems: LineItem[];
@@ -331,6 +331,78 @@ const InvoiceDocument: React.FC<{
   template: UnifiedTemplate;
 }> = ({ data, lineItems, companySettings, template }) => {
   const styles = createStyles(template.page_settings);
+  
+  // Additional invoice-specific styles
+  const invoiceStyles = StyleSheet.create({
+    taxInvoiceTitle: {
+      fontSize: 28,
+      fontWeight: "bold",
+      color: "#1f2937",
+      marginBottom: 4,
+    },
+    referenceSection: {
+      marginBottom: 15,
+      padding: 10,
+      backgroundColor: "#f9fafb",
+      borderRadius: 4,
+    },
+    referenceRow: {
+      flexDirection: "row",
+      marginBottom: 4,
+    },
+    referenceLabel: {
+      fontSize: 9,
+      color: "#6b7280",
+      width: 120,
+    },
+    referenceValue: {
+      fontSize: 9,
+      color: "#374151",
+      fontWeight: "bold",
+    },
+    paymentSection: {
+      marginTop: 20,
+      padding: 12,
+      backgroundColor: "#eff6ff",
+      borderRadius: 4,
+      borderLeftWidth: 4,
+      borderLeftColor: "#3b82f6",
+    },
+    paymentTitle: {
+      fontSize: 11,
+      fontWeight: "bold",
+      color: "#1f2937",
+      marginBottom: 8,
+    },
+    paymentRow: {
+      flexDirection: "row",
+      marginBottom: 4,
+    },
+    paymentLabel: {
+      fontSize: 9,
+      color: "#6b7280",
+      width: 100,
+    },
+    paymentValue: {
+      fontSize: 9,
+      color: "#374151",
+      fontWeight: "bold",
+    },
+    paymentInstructions: {
+      fontSize: 8,
+      color: "#6b7280",
+      marginTop: 8,
+      fontStyle: "italic",
+    },
+    customerAbn: {
+      fontSize: 9,
+      color: "#6b7280",
+      marginTop: 2,
+    },
+  });
+  
+  const hasSourceReferences = data.source_service_order || data.source_project;
+  const hasBankDetails = companySettings.bank_name || companySettings.bank_bsb || companySettings.bank_account_number;
   
   return (
     <Document>
@@ -344,6 +416,7 @@ const InvoiceDocument: React.FC<{
             <Text style={styles.companyName}>{companySettings.company_name}</Text>
             <Text style={styles.companyInfo}>
               {companySettings.address}
+              {companySettings.address_line_2 && `\n${companySettings.address_line_2}`}
               {"\n"}
               {[companySettings.city, companySettings.state, companySettings.postcode]
                 .filter(Boolean)
@@ -356,7 +429,7 @@ const InvoiceDocument: React.FC<{
             </Text>
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.documentTitle}>Tax Invoice</Text>
+            <Text style={invoiceStyles.taxInvoiceTitle}>TAX INVOICE</Text>
             <Text style={styles.documentNumber}>#{data.document_number}</Text>
             <Text style={styles.documentDate}>Date: {data.document_date}</Text>
             {data.due_date && (
@@ -369,7 +442,18 @@ const InvoiceDocument: React.FC<{
         <View style={styles.infoSection}>
           <View style={styles.infoColumn}>
             <Text style={styles.infoLabel}>Bill To</Text>
-            <Text style={styles.infoValueBold}>{data.customer?.name}</Text>
+            {/* Show legal name if different from trading name */}
+            {data.customer?.legal_name && data.customer.legal_name !== data.customer.name ? (
+              <>
+                <Text style={styles.infoValueBold}>{data.customer.legal_name}</Text>
+                <Text style={styles.infoValue}>Trading as: {data.customer.name}</Text>
+              </>
+            ) : (
+              <Text style={styles.infoValueBold}>{data.customer?.name}</Text>
+            )}
+            {data.customer?.contact_name && (
+              <Text style={styles.infoValue}>Attn: {data.customer.contact_name}</Text>
+            )}
             <Text style={styles.infoValue}>
               {data.customer?.address}
               {"\n"}
@@ -377,12 +461,57 @@ const InvoiceDocument: React.FC<{
                 .filter(Boolean)
                 .join(", ")}
             </Text>
+            {data.customer?.abn && (
+              <Text style={invoiceStyles.customerAbn}>ABN: {data.customer.abn}</Text>
+            )}
+            {data.customer?.billing_email && (
+              <Text style={styles.infoValue}>{data.customer.billing_email}</Text>
+            )}
           </View>
           <View style={styles.infoColumn}>
             <Text style={styles.infoLabel}>Payment Terms</Text>
-            <Text style={styles.infoValue}>{data.payment_terms || "Due on Receipt"}</Text>
+            <Text style={styles.infoValueBold}>{data.payment_terms || "Due on Receipt"}</Text>
+            {data.due_date && (
+              <>
+                <Text style={styles.infoLabel}>Amount Due</Text>
+                <Text style={styles.infoValueBold}>{formatCurrency(data.total)}</Text>
+              </>
+            )}
           </View>
         </View>
+        
+        {/* Source Document References */}
+        {hasSourceReferences && (
+          <View style={invoiceStyles.referenceSection}>
+            <Text style={styles.infoLabel}>Reference Details</Text>
+            {data.source_service_order && (
+              <>
+                <View style={invoiceStyles.referenceRow}>
+                  <Text style={invoiceStyles.referenceLabel}>Service Order:</Text>
+                  <Text style={invoiceStyles.referenceValue}>{data.source_service_order.order_number}</Text>
+                </View>
+                {data.source_service_order.work_order_number && (
+                  <View style={invoiceStyles.referenceRow}>
+                    <Text style={invoiceStyles.referenceLabel}>Work Order #:</Text>
+                    <Text style={invoiceStyles.referenceValue}>{data.source_service_order.work_order_number}</Text>
+                  </View>
+                )}
+                {data.source_service_order.purchase_order_number && (
+                  <View style={invoiceStyles.referenceRow}>
+                    <Text style={invoiceStyles.referenceLabel}>Customer PO #:</Text>
+                    <Text style={invoiceStyles.referenceValue}>{data.source_service_order.purchase_order_number}</Text>
+                  </View>
+                )}
+              </>
+            )}
+            {data.source_project && (
+              <View style={invoiceStyles.referenceRow}>
+                <Text style={invoiceStyles.referenceLabel}>Project:</Text>
+                <Text style={invoiceStyles.referenceValue}>{data.source_project.name}</Text>
+              </View>
+            )}
+          </View>
+        )}
         
         {/* Line Items */}
         <View style={styles.lineItemsSection}>
@@ -395,7 +524,7 @@ const InvoiceDocument: React.FC<{
         {/* Totals */}
         <View style={styles.totalsSection}>
           <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Subtotal</Text>
+            <Text style={styles.totalsLabel}>Subtotal (Ex. GST)</Text>
             <Text style={styles.totalsValue}>{formatCurrency(data.subtotal)}</Text>
           </View>
           <View style={styles.totalsRow}>
@@ -403,10 +532,48 @@ const InvoiceDocument: React.FC<{
             <Text style={styles.totalsValue}>{formatCurrency(data.tax_amount)}</Text>
           </View>
           <View style={styles.totalsFinal}>
-            <Text style={styles.totalsFinalLabel}>Total Due</Text>
+            <Text style={styles.totalsFinalLabel}>Total Due (Inc. GST)</Text>
             <Text style={styles.totalsFinalValue}>{formatCurrency(data.total)}</Text>
           </View>
         </View>
+        
+        {/* Payment Details */}
+        {hasBankDetails && (
+          <View style={invoiceStyles.paymentSection}>
+            <Text style={invoiceStyles.paymentTitle}>Payment Details</Text>
+            {companySettings.bank_name && (
+              <View style={invoiceStyles.paymentRow}>
+                <Text style={invoiceStyles.paymentLabel}>Bank:</Text>
+                <Text style={invoiceStyles.paymentValue}>{companySettings.bank_name}</Text>
+              </View>
+            )}
+            {companySettings.bank_account_name && (
+              <View style={invoiceStyles.paymentRow}>
+                <Text style={invoiceStyles.paymentLabel}>Account Name:</Text>
+                <Text style={invoiceStyles.paymentValue}>{companySettings.bank_account_name}</Text>
+              </View>
+            )}
+            {companySettings.bank_bsb && (
+              <View style={invoiceStyles.paymentRow}>
+                <Text style={invoiceStyles.paymentLabel}>BSB:</Text>
+                <Text style={invoiceStyles.paymentValue}>{companySettings.bank_bsb}</Text>
+              </View>
+            )}
+            {companySettings.bank_account_number && (
+              <View style={invoiceStyles.paymentRow}>
+                <Text style={invoiceStyles.paymentLabel}>Account No:</Text>
+                <Text style={invoiceStyles.paymentValue}>{companySettings.bank_account_number}</Text>
+              </View>
+            )}
+            <View style={invoiceStyles.paymentRow}>
+              <Text style={invoiceStyles.paymentLabel}>Reference:</Text>
+              <Text style={invoiceStyles.paymentValue}>{data.document_number}</Text>
+            </View>
+            {companySettings.payment_instructions && (
+              <Text style={invoiceStyles.paymentInstructions}>{companySettings.payment_instructions}</Text>
+            )}
+          </View>
+        )}
         
         {/* Notes */}
         {data.notes && (
@@ -419,7 +586,7 @@ const InvoiceDocument: React.FC<{
         {/* Footer */}
         <View style={styles.footer} fixed>
           <Text>
-            {companySettings.company_name} | {companySettings.website || companySettings.email}
+            {companySettings.company_name} | {companySettings.abn ? `ABN: ${companySettings.abn}` : ""} | {companySettings.website || companySettings.email}
           </Text>
         </View>
       </Page>
