@@ -87,10 +87,10 @@ export default function InvoicePDFDownload({
           customerInfo = customer;
         }
 
-        // Fetch primary billing contact
+        // Fetch primary billing contact with full address
         const { data: billingContact } = await supabase
           .from("contacts")
-          .select("first_name, last_name, email, phone")
+          .select("first_name, last_name, email, phone, address, city, state, postcode")
           .eq("customer_id", invoice.customer_id)
           .eq("is_primary", true)
           .maybeSingle();
@@ -99,34 +99,39 @@ export default function InvoicePDFDownload({
           customerInfo.contact_name = `${billingContact.first_name} ${billingContact.last_name}`.trim();
           customerInfo.billing_email = customerInfo.billing_email || billingContact.email;
           customerInfo.billing_phone = customerInfo.billing_phone || billingContact.phone;
+          // Billing contact address
+          customerInfo.billing_contact_name = `${billingContact.first_name} ${billingContact.last_name}`.trim();
+          customerInfo.billing_contact_address = billingContact.address;
+          customerInfo.billing_contact_city = billingContact.city;
+          customerInfo.billing_contact_state = billingContact.state;
+          customerInfo.billing_contact_postcode = billingContact.postcode;
         }
       }
 
-      // Build source document references from line items
+      // Build source document references from line items and collect unique locations
       let sourceServiceOrder = undefined;
       let sourceProject = undefined;
       let invoiceDescription = '';
-      let shipTo = undefined;
+      const uniqueLocations: Map<string, any> = new Map();
+      const sourceLocationMap = new Map<string, any>();
       
       if (sourceDocuments && sourceDocuments.size > 0) {
         for (const [key, doc] of sourceDocuments) {
-          if (doc.type === "service_order" && !sourceServiceOrder) {
-            sourceServiceOrder = {
-              order_number: doc.order_number,
-              work_order_number: doc.work_order_number,
-              purchase_order_number: doc.purchase_order_number,
-            };
-            if (doc.description) {
-              invoiceDescription = doc.description;
-            }
-            if (doc.location) {
-              shipTo = {
-                name: doc.location.name || '',
-                address: doc.location.address || '',
-                city: doc.location.city || '',
-                state: doc.location.state || '',
-                postcode: doc.location.postcode || '',
+          if (doc.type === "service_order") {
+            if (!sourceServiceOrder) {
+              sourceServiceOrder = {
+                order_number: doc.order_number,
+                work_order_number: doc.work_order_number,
+                purchase_order_number: doc.purchase_order_number,
               };
+              if (doc.description) {
+                invoiceDescription = doc.description;
+              }
+            }
+            // Collect all locations
+            if (doc.location?.name) {
+              uniqueLocations.set(doc.location.name, doc.location);
+              sourceLocationMap.set(doc.id, doc.location);
             }
           } else if (doc.type === "project" && !sourceProject) {
             sourceProject = {
@@ -137,6 +142,27 @@ export default function InvoicePDFDownload({
             }
           }
         }
+      }
+
+      // Determine Ship To based on unique locations
+      let shipTo = undefined;
+      if (uniqueLocations.size === 1) {
+        const [, location] = [...uniqueLocations.entries()][0];
+        shipTo = {
+          name: location.name || '',
+          address: location.address || '',
+          city: location.city || '',
+          state: location.state || '',
+          postcode: location.postcode || '',
+        };
+      } else if (uniqueLocations.size > 1) {
+        shipTo = {
+          name: 'Multiple - as itemised below',
+          address: '',
+          city: '',
+          state: '',
+          postcode: '',
+        };
       }
 
       // Build document data
@@ -158,12 +184,13 @@ export default function InvoicePDFDownload({
           legal_name: customerInfo.legal_company_name,
           trading_name: customerInfo.trading_name,
           abn: customerInfo.abn,
-          contact_name: customerInfo.contact_name,
-          address: customerInfo.billing_address || customerInfo.address || "",
-          city: customerInfo.city || "",
-          state: customerInfo.state || "",
-          postcode: customerInfo.postcode || "",
-          email: customerInfo.email || "",
+          contact_name: customerInfo.billing_contact_name || customerInfo.contact_name,
+          // Use billing contact address if available, otherwise customer billing address
+          address: customerInfo.billing_contact_address || customerInfo.billing_address || customerInfo.address || "",
+          city: customerInfo.billing_contact_city || customerInfo.city || "",
+          state: customerInfo.billing_contact_state || customerInfo.state || "",
+          postcode: customerInfo.billing_contact_postcode || customerInfo.postcode || "",
+          email: customerInfo.billing_email || customerInfo.email || "",
           phone: customerInfo.billing_phone || customerInfo.phone || "",
           billing_email: customerInfo.billing_email,
           billing_phone: customerInfo.billing_phone,
@@ -172,15 +199,30 @@ export default function InvoicePDFDownload({
         source_project: sourceProject,
       };
 
-      // Convert line items
-      const pdfLineItems: LineItem[] = (lineItems || []).map((item, index) => ({
-        id: item.id || `item-${index}`,
-        description: item.description || "",
-        quantity: item.quantity || 1,
-        unit_price: item.unit_price || 0,
-        line_total: item.line_total || 0,
-        is_gst_free: item.is_gst_free || false,
-      }));
+      // Convert line items with location names
+      const hasMultipleLocations = uniqueLocations.size > 1;
+      const pdfLineItems: LineItem[] = (lineItems || []).map((item, index) => {
+        // Get location name from source service order
+        let locationName = '';
+        if (item.source_type === 'service_order' && item.source_id && sourceLocationMap.has(item.source_id)) {
+          locationName = sourceLocationMap.get(item.source_id)?.name || '';
+        }
+        
+        // Prepend location name to description if we have multiple locations
+        const description = hasMultipleLocations && locationName 
+          ? `[${locationName}] ${item.description || ''}`
+          : item.description || '';
+        
+        return {
+          id: item.id || `item-${index}`,
+          description,
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          line_total: item.line_total || 0,
+          is_gst_free: item.is_gst_free || false,
+          location_name: locationName,
+        };
+      });
 
       // Fetch template or use default
       const { data: templateData } = await supabase

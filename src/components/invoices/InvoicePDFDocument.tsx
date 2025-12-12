@@ -412,16 +412,22 @@ export function InvoicePDFDocument({
           <View style={styles.addressColumn}>
             <Text style={styles.addressLabel}>Ship To:</Text>
             {documentData.ship_to ? (
-              <>
+              documentData.ship_to.name === 'Multiple - as itemised below' ? (
                 <Text style={styles.addressName}>{documentData.ship_to.name}</Text>
-                <Text style={styles.addressText}>
-                  {documentData.ship_to.address}
-                  {"\n"}
-                  {[documentData.ship_to.city, documentData.ship_to.state, documentData.ship_to.postcode]
-                    .filter(Boolean)
-                    .join(" ")}
-                </Text>
-              </>
+              ) : (
+                <>
+                  <Text style={styles.addressName}>{documentData.ship_to.name}</Text>
+                  {documentData.ship_to.address && (
+                    <Text style={styles.addressText}>
+                      {documentData.ship_to.address}
+                      {"\n"}
+                      {[documentData.ship_to.city, documentData.ship_to.state, documentData.ship_to.postcode]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </Text>
+                  )}
+                </>
+              )
             ) : (
               <>
                 <Text style={styles.addressName}>{documentData.customer?.name}</Text>

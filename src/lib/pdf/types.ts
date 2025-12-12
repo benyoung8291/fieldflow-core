@@ -9,6 +9,7 @@ export interface LineItem {
   is_gst_free?: boolean;
   parent_line_item_id?: string | null;
   sub_items?: LineItem[];
+  location_name?: string;
 }
 
 export interface CompanySettings {
@@ -48,6 +49,12 @@ export interface CustomerInfo {
   contact_name?: string;
   billing_email?: string;
   billing_phone?: string;
+  // Billing contact details (separate from customer address)
+  billing_contact_name?: string;
+  billing_contact_address?: string;
+  billing_contact_city?: string;
+  billing_contact_state?: string;
+  billing_contact_postcode?: string;
 }
 
 export interface SupplierInfo {

@@ -159,18 +159,33 @@ export default function InvoiceDetails() {
         } else if (item.source_type === "service_order") {
           const { data: order, error: orderError } = await supabase
             .from("service_orders")
-            .select("id, order_number, title, work_order_number, purchase_order_number")
+            .select(`
+              id, order_number, title, work_order_number, purchase_order_number, description,
+              customer_locations (
+                id, name, address, city, state, postcode
+              )
+            `)
             .eq("id", item.source_id)
             .single();
           
           if (!orderError && order) {
+            const location = order.customer_locations as any;
             sourceDocuments.set(key, { 
               type: "service_order" as const,
               id: order.id,
               order_number: order.order_number,
               title: order.title,
+              description: order.description,
               work_order_number: order.work_order_number,
-              purchase_order_number: order.purchase_order_number
+              purchase_order_number: order.purchase_order_number,
+              location: location ? {
+                id: location.id,
+                name: location.name,
+                address: location.address,
+                city: location.city,
+                state: location.state,
+                postcode: location.postcode,
+              } : undefined,
             });
           }
         }
@@ -236,10 +251,10 @@ export default function InvoiceDetails() {
       
       if (!customer) return null;
 
-      // Fetch primary billing contact
+      // Fetch primary billing contact with full address
       const { data: billingContact } = await supabase
         .from("contacts")
-        .select("first_name, last_name, email, phone")
+        .select("first_name, last_name, email, phone, address, city, state, postcode")
         .eq("customer_id", invoice.customer_id)
         .eq("is_primary", true)
         .maybeSingle();
@@ -249,6 +264,12 @@ export default function InvoiceDetails() {
         contact_name: billingContact ? `${billingContact.first_name} ${billingContact.last_name}`.trim() : undefined,
         billing_email: customer.billing_email || billingContact?.email,
         billing_phone: customer.billing_phone || billingContact?.phone,
+        // Billing contact address details
+        billing_contact_name: billingContact ? `${billingContact.first_name} ${billingContact.last_name}`.trim() : undefined,
+        billing_contact_address: billingContact?.address,
+        billing_contact_city: billingContact?.city,
+        billing_contact_state: billingContact?.state,
+        billing_contact_postcode: billingContact?.postcode,
       };
     },
     enabled: !!invoice?.customer_id,
