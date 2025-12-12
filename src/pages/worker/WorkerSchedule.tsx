@@ -106,21 +106,18 @@ export default function WorkerSchedule() {
       // Delete existing schedule
       await supabase.from('worker_schedule').delete().eq('worker_id', workerId);
 
-      // Get tenant_id from profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', workerId)
-        .single();
+      // Get tenant_id using RPC function (bypasses RLS)
+      const { data: tenantId, error: tenantError } = await supabase
+        .rpc('get_user_tenant_id');
 
-      if (!profile?.tenant_id) throw new Error('Tenant not found');
+      if (tenantError || !tenantId) throw new Error('Tenant not found');
 
       // Insert active days only
       const activeSchedule = schedule
         .filter((s) => s.is_active)
         .map((s) => ({
           worker_id: workerId,
-          tenant_id: profile.tenant_id,
+          tenant_id: tenantId,
           day_of_week: s.day_of_week,
           start_time: s.start_time,
           end_time: s.end_time,
