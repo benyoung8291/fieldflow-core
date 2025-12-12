@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { WorkerAvailabilityExpandedView } from "./WorkerAvailabilityExpandedView";
 
 interface Worker {
   id: string;
@@ -18,6 +19,7 @@ interface DayData {
   isSeasonalOverride: boolean;
   seasonalPeriods: string[];
   availableHours: number;
+  assignedHours: number;
 }
 
 interface AvailableWorker {
@@ -46,6 +48,24 @@ const formatTime = (time: string | null): string => {
 const formatPeriods = (periods: string[]): string => {
   if (periods.includes("anytime")) return "All day";
   return periods.map(p => p.charAt(0).toUpperCase()).join("+");
+};
+
+const getWorkerStatusColor = (dayData: DayData) => {
+  const remainingHours = dayData.availableHours - dayData.assignedHours;
+
+  if (dayData.assignedHours >= dayData.availableHours || dayData.assignedHours >= 8) {
+    // Fully booked - blue
+    return "bg-blue-500/10 text-blue-600 border-l-2 border-blue-500 dark:text-blue-400";
+  } else if (dayData.assignedHours > 0 && remainingHours > 0) {
+    // Partially assigned - orange
+    return "bg-orange-500/10 text-orange-600 border-l-2 border-orange-500 dark:text-orange-400";
+  } else if (dayData.isSeasonalOverride) {
+    // Seasonal availability - warning/yellow
+    return "bg-warning/10 text-warning border-l-2 border-warning";
+  } else {
+    // Fully available - green/success
+    return "bg-success/10 text-success border-l-2 border-success";
+  }
 };
 
 export function WorkerAvailabilityDayCell({
@@ -91,75 +111,65 @@ export function WorkerAvailabilityDayCell({
       {availableWorkers.length > 0 ? (
         <ScrollArea className="h-[88px]">
           <div className="space-y-0.5">
-            {visibleWorkers.map(({ worker, dayData }) => (
-              <Tooltip key={worker.id}>
-                <TooltipTrigger asChild>
-                  <div
-                    className={cn(
-                      "text-xs px-1.5 py-0.5 rounded truncate cursor-default",
-                      dayData.isSeasonalOverride
-                        ? "bg-warning/10 text-warning border-l-2 border-warning"
-                        : "bg-success/10 text-success border-l-2 border-success"
-                    )}
-                  >
-                    <span className="font-medium">
-                      {worker.first_name} {worker.last_name.charAt(0)}.
-                    </span>
-                    <span className="ml-1 text-muted-foreground">
-                      {dayData.isSeasonalOverride
-                        ? formatPeriods(dayData.seasonalPeriods)
-                        : `${formatTime(dayData.startTime)}-${formatTime(dayData.endTime)}`}
-                    </span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <div className="text-sm">
-                    <p className="font-medium">
-                      {worker.first_name} {worker.last_name}
-                    </p>
-                    {worker.worker_state && (
-                      <p className="text-muted-foreground text-xs">{worker.worker_state}</p>
-                    )}
-                    <p className="mt-1">
-                      {dayData.isSeasonalOverride ? (
-                        <>Seasonal: {dayData.seasonalPeriods.join(", ")}</>
-                      ) : (
-                        <>
-                          {dayData.startTime?.slice(0, 5)} - {dayData.endTime?.slice(0, 5)}
-                        </>
+            {visibleWorkers.map(({ worker, dayData }) => {
+              const remainingHours = Math.max(0, dayData.availableHours - dayData.assignedHours);
+              
+              return (
+                <Tooltip key={worker.id}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={cn(
+                        "text-xs px-1.5 py-0.5 rounded truncate cursor-default",
+                        getWorkerStatusColor(dayData)
                       )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {dayData.availableHours}h available
-                    </p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            ))}
+                    >
+                      <span className="font-medium">
+                        {worker.first_name} {worker.last_name.charAt(0)}.
+                      </span>
+                      <span className="ml-1 text-muted-foreground">
+                        {dayData.isSeasonalOverride
+                          ? formatPeriods(dayData.seasonalPeriods)
+                          : `${formatTime(dayData.startTime)}-${formatTime(dayData.endTime)}`}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <div className="text-sm">
+                      <p className="font-medium">
+                        {worker.first_name} {worker.last_name}
+                      </p>
+                      {worker.worker_state && (
+                        <p className="text-muted-foreground text-xs">{worker.worker_state}</p>
+                      )}
+                      <p className="mt-1">
+                        {dayData.isSeasonalOverride ? (
+                          <>Seasonal: {dayData.seasonalPeriods.join(", ")}</>
+                        ) : (
+                          <>
+                            {dayData.startTime?.slice(0, 5)} - {dayData.endTime?.slice(0, 5)}
+                          </>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {dayData.assignedHours > 0
+                          ? `${dayData.assignedHours}h assigned, ${remainingHours}h remaining`
+                          : `${dayData.availableHours}h available`}
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
             {remainingCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="text-xs text-muted-foreground px-1.5 py-0.5 cursor-default hover:text-foreground">
+              <WorkerAvailabilityExpandedView
+                date={date}
+                availableWorkers={availableWorkers}
+                trigger={
+                  <div className="text-xs text-muted-foreground px-1.5 py-0.5 cursor-pointer hover:text-foreground hover:underline">
                     +{remainingCount} more
                   </div>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <div className="text-sm space-y-1">
-                    {availableWorkers.slice(maxVisible).map(({ worker, dayData }) => (
-                      <div key={worker.id}>
-                        <span className="font-medium">
-                          {worker.first_name} {worker.last_name}
-                        </span>
-                        <span className="text-muted-foreground ml-2">
-                          {dayData.isSeasonalOverride
-                            ? formatPeriods(dayData.seasonalPeriods)
-                            : `${formatTime(dayData.startTime)}-${formatTime(dayData.endTime)}`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+                }
+              />
             )}
           </div>
         </ScrollArea>
