@@ -61,33 +61,33 @@ export function InvoicePDFPreview({
     
     const customer = customerInfo || invoice.customers || {};
     
-    // Build source references and extract description/location
+    // Build source references and collect all unique locations
     let sourceServiceOrder = undefined;
     let sourceProject = undefined;
     let invoiceDescription = '';
-    let shipTo = undefined;
+    const uniqueLocations: Map<string, any> = new Map();
+    
+    // Build a map of source_id to location for line items
+    const sourceLocationMap = new Map<string, any>();
     
     if (sourceDocuments && sourceDocuments.size > 0) {
-      for (const [, doc] of sourceDocuments) {
-        if (doc.type === "service_order" && !sourceServiceOrder) {
-          sourceServiceOrder = {
-            order_number: doc.order_number,
-            work_order_number: doc.work_order_number,
-            purchase_order_number: doc.purchase_order_number,
-          };
-          // Use service order description as invoice description
-          if (doc.description) {
-            invoiceDescription = doc.description;
-          }
-          // Get location from service order
-          if (doc.location) {
-            shipTo = {
-              name: doc.location.name || '',
-              address: doc.location.address || '',
-              city: doc.location.city || '',
-              state: doc.location.state || '',
-              postcode: doc.location.postcode || '',
+      for (const [key, doc] of sourceDocuments) {
+        if (doc.type === "service_order") {
+          if (!sourceServiceOrder) {
+            sourceServiceOrder = {
+              order_number: doc.order_number,
+              work_order_number: doc.work_order_number,
+              purchase_order_number: doc.purchase_order_number,
             };
+            // Use service order description as invoice description
+            if (doc.description) {
+              invoiceDescription = doc.description;
+            }
+          }
+          // Collect all locations
+          if (doc.location?.name) {
+            uniqueLocations.set(doc.location.name, doc.location);
+            sourceLocationMap.set(doc.id, doc.location);
           }
         } else if (doc.type === "project" && !sourceProject) {
           sourceProject = { name: doc.name };
@@ -96,6 +96,27 @@ export function InvoicePDFPreview({
           }
         }
       }
+    }
+
+    // Determine Ship To based on unique locations
+    let shipTo = undefined;
+    if (uniqueLocations.size === 1) {
+      const [, location] = [...uniqueLocations.entries()][0];
+      shipTo = {
+        name: location.name || '',
+        address: location.address || '',
+        city: location.city || '',
+        state: location.state || '',
+        postcode: location.postcode || '',
+      };
+    } else if (uniqueLocations.size > 1) {
+      shipTo = {
+        name: 'Multiple - as itemised below',
+        address: '',
+        city: '',
+        state: '',
+        postcode: '',
+      };
     }
 
     return {
@@ -116,32 +137,53 @@ export function InvoicePDFPreview({
         legal_name: customer.legal_company_name,
         trading_name: customer.trading_name,
         abn: customer.abn,
-        contact_name: customer.contact_name,
-        address: customer.billing_address || customer.address || "",
-        city: customer.city || "",
-        state: customer.state || "",
-        postcode: customer.postcode || "",
-        email: customer.email || "",
+        contact_name: customer.billing_contact_name || customer.contact_name,
+        // Use billing contact address if available, otherwise customer billing address
+        address: customer.billing_contact_address || customer.billing_address || customer.address || "",
+        city: customer.billing_contact_city || customer.city || "",
+        state: customer.billing_contact_state || customer.state || "",
+        postcode: customer.billing_contact_postcode || customer.postcode || "",
+        email: customer.billing_email || customer.email || "",
         phone: customer.billing_phone || customer.phone || "",
         billing_email: customer.billing_email,
         billing_phone: customer.billing_phone,
       },
       source_service_order: sourceServiceOrder,
       source_project: sourceProject,
-    };
+      // Store location map for line item processing
+      _sourceLocationMap: sourceLocationMap,
+    } as DocumentData & { _sourceLocationMap?: Map<string, any> };
   }, [invoice, customerInfo, sourceDocuments]);
 
-  // Convert line items
+  // Convert line items with location names
   const pdfLineItems: LineItem[] = useMemo(() => {
-    return (lineItems || []).map((item, index) => ({
-      id: item.id || `item-${index}`,
-      description: item.description || "",
-      quantity: item.quantity || 1,
-      unit_price: item.unit_price || 0,
-      line_total: item.line_total || 0,
-      is_gst_free: item.is_gst_free || false,
-    }));
-  }, [lineItems]);
+    const extendedDocData = documentData as (DocumentData & { _sourceLocationMap?: Map<string, any> }) | null;
+    const locationMap = extendedDocData?._sourceLocationMap || new Map();
+    
+    return (lineItems || []).map((item, index) => {
+      // Get location name from source service order
+      let locationName = '';
+      if (item.source_type === 'service_order' && item.source_id && locationMap.has(item.source_id)) {
+        locationName = locationMap.get(item.source_id)?.name || '';
+      }
+      
+      // Prepend location name to description if we have multiple locations
+      const hasMultipleLocations = locationMap.size > 1;
+      const description = hasMultipleLocations && locationName 
+        ? `[${locationName}] ${item.description || ''}`
+        : item.description || '';
+      
+      return {
+        id: item.id || `item-${index}`,
+        description,
+        quantity: item.quantity || 1,
+        unit_price: item.unit_price || 0,
+        line_total: item.line_total || 0,
+        is_gst_free: item.is_gst_free || false,
+        location_name: locationName,
+      };
+    });
+  }, [lineItems, documentData]);
 
   // Memoize the PDF document
   const pdfDocument = useMemo(() => {
