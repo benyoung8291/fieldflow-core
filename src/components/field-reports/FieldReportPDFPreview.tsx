@@ -81,8 +81,11 @@ export function FieldReportPDFPreview({ report, companySettings }: FieldReportPD
 
   const handleDownload = () => {
     if (currentBlob && report) {
-      const reportNumber = report.report_number?.replace(/^FR-DRAFT-/, 'FR-').replace(/^DRAFT-/, '') || 'Report';
-      saveAs(currentBlob, `Service-Report-${reportNumber}.pdf`);
+      const locationName = report.location?.name?.replace(/[^a-zA-Z0-9]/g, '-') || 'Location';
+      const dateStr = report.service_date 
+        ? new Date(report.service_date).toLocaleDateString('en-GB').replace(/\//g, '').slice(0, 8)
+        : 'Report';
+      saveAs(currentBlob, `${dateStr}-${locationName}.pdf`);
     }
   };
 
