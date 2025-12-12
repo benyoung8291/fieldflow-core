@@ -68,6 +68,7 @@ export default function InvoicePDFDownload({
         bank_account_number: settings?.bank_account_number || "",
         bank_account_name: settings?.bank_account_name || "",
         payment_instructions: settings?.payment_instructions || "",
+        terms_conditions: settings?.invoice_terms_conditions || "",
       };
 
       // Fetch full customer details if we have a customer_id
@@ -111,7 +112,8 @@ export default function InvoicePDFDownload({
       // Build source document references from line items and collect unique locations
       let sourceServiceOrder = undefined;
       let sourceProject = undefined;
-      let invoiceDescription = '';
+      // Use invoice description if set, otherwise derive from source documents
+      let invoiceDescription = invoice.description || '';
       const uniqueLocations: Map<string, any> = new Map();
       const sourceLocationMap = new Map<string, any>();
       
@@ -124,7 +126,8 @@ export default function InvoicePDFDownload({
                 work_order_number: doc.work_order_number,
                 purchase_order_number: doc.purchase_order_number,
               };
-              if (doc.description) {
+              // Only use source document description if invoice description is empty
+              if (!invoiceDescription && doc.description) {
                 invoiceDescription = doc.description;
               }
             }
@@ -137,6 +140,7 @@ export default function InvoicePDFDownload({
             sourceProject = {
               name: doc.name,
             };
+            // Only use source document description if invoice description is empty
             if (!invoiceDescription && doc.name) {
               invoiceDescription = doc.name;
             }

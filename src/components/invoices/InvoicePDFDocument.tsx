@@ -280,6 +280,44 @@ const createStyles = (pageSettings: PageSettings) =>
       color: "#6b7280",
       lineHeight: 1.4,
     },
+    // Terms and conditions section
+    termsSection: {
+      marginTop: 15,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: "#e5e7eb",
+    },
+    termsTitle: {
+      fontSize: 9,
+      fontWeight: "bold",
+      color: "#374151",
+      marginBottom: 4,
+    },
+    termsText: {
+      fontSize: 7,
+      color: "#6b7280",
+      lineHeight: 1.4,
+    },
+    // Large due date styling
+    dueDateRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 3,
+      paddingVertical: 4,
+      backgroundColor: "#fef3c7",
+      paddingHorizontal: 6,
+      borderRadius: 2,
+    },
+    dueDateLabel: {
+      fontSize: 11,
+      fontWeight: "bold",
+      color: "#92400e",
+    },
+    dueDateValue: {
+      fontSize: 11,
+      fontWeight: "bold",
+      color: "#92400e",
+    },
     // Footer
     footer: {
       position: "absolute",
@@ -362,9 +400,21 @@ export function InvoicePDFDocument({
               <Text style={styles.docInfoValue}>{documentData.document_date}</Text>
             </View>
             {documentData.due_date && (
-              <View style={styles.docInfoRow}>
-                <Text style={styles.docInfoLabel}>Due Date:</Text>
-                <Text style={styles.docInfoValue}>{documentData.due_date}</Text>
+              <View style={styles.dueDateRow}>
+                <Text style={styles.dueDateLabel}>Due Date:</Text>
+                <Text style={styles.dueDateValue}>
+                  {(() => {
+                    try {
+                      const date = new Date(documentData.due_date);
+                      const day = date.getDate().toString().padStart(2, '0');
+                      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                      const year = date.getFullYear().toString().slice(-2);
+                      return `${day}/${month}/${year}`;
+                    } catch {
+                      return documentData.due_date;
+                    }
+                  })()}
+                </Text>
               </View>
             )}
             <View style={styles.docInfoRow}>
@@ -560,6 +610,14 @@ export function InvoicePDFDocument({
           <View style={styles.notesSection}>
             <Text style={styles.notesTitle}>Notes</Text>
             <Text style={styles.notesText}>{documentData.notes}</Text>
+          </View>
+        )}
+        
+        {/* Terms & Conditions */}
+        {companySettings.terms_conditions && (
+          <View style={styles.termsSection}>
+            <Text style={styles.termsTitle}>Terms & Conditions</Text>
+            <Text style={styles.termsText}>{companySettings.terms_conditions}</Text>
           </View>
         )}
         

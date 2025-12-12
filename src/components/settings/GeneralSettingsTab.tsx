@@ -34,6 +34,8 @@ export default function GeneralSettingsTab() {
     bankAccountNumber: "",
     bankAccountName: "",
     paymentInstructions: "",
+    // Invoice terms and conditions
+    invoiceTermsConditions: "",
   });
   const [serviceOrderLookaheadDays, setServiceOrderLookaheadDays] = useState<number>(30);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -91,6 +93,8 @@ export default function GeneralSettingsTab() {
         bankAccountNumber: settings.bank_account_number || "",
         bankAccountName: settings.bank_account_name || "",
         paymentInstructions: settings.payment_instructions || "",
+        // Invoice terms and conditions
+        invoiceTermsConditions: settings.invoice_terms_conditions || "",
       });
     }
   }, [settings]);
@@ -204,6 +208,8 @@ export default function GeneralSettingsTab() {
         bank_account_number: formData.bankAccountNumber,
         bank_account_name: formData.bankAccountName,
         payment_instructions: formData.paymentInstructions,
+        // Invoice terms and conditions
+        invoice_terms_conditions: formData.invoiceTermsConditions,
       };
 
       if (settings) {
@@ -595,6 +601,30 @@ export default function GeneralSettingsTab() {
             />
             <p className="text-sm text-muted-foreground">
               Additional instructions that will appear on invoices
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice Terms & Conditions</CardTitle>
+          <CardDescription>
+            Standard terms and conditions that appear on all invoices
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="invoice-terms">Terms & Conditions</Label>
+            <textarea
+              id="invoice-terms"
+              className="w-full min-h-[120px] p-3 border rounded-md bg-background text-sm resize-y"
+              placeholder="Enter your invoice terms and conditions..."
+              value={formData.invoiceTermsConditions}
+              onChange={(e) => setFormData({ ...formData, invoiceTermsConditions: e.target.value })}
+            />
+            <p className="text-sm text-muted-foreground">
+              These terms will be displayed at the bottom of all invoice PDFs
             </p>
           </div>
         </CardContent>
