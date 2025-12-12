@@ -10,6 +10,8 @@ import { Calendar, MapPin, User, FileText, DollarSign, Clock, Edit, Mail, Phone,
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
+import { MELBOURNE_TZ } from "@/lib/utils";
 import DocumentDetailLayout, { DocumentAction, StatusBadge, TabConfig } from "@/components/layout/DocumentDetailLayout";
 import ServiceOrderDialog from "@/components/service-orders/ServiceOrderDialog";
 import ServiceOrderAttachments from "@/components/service-orders/ServiceOrderAttachments";
@@ -530,10 +532,13 @@ export default function ServiceOrderDetails() {
       
       if (!profile) throw new Error("Profile not found");
 
+      const startTimeUtc = fromZonedTime(startDateTime, MELBOURNE_TZ).toISOString();
+      const endTimeUtc = fromZonedTime(endDateTime, MELBOURNE_TZ).toISOString();
+
       console.log("Creating appointment:", {
         title: order?.title || "Appointment",
-        start_time: startDateTime.toISOString(),
-        end_time: endDateTime.toISOString(),
+        start_time: startTimeUtc,
+        end_time: endTimeUtc,
         service_order_id: id,
         tenant_id: profile.tenant_id,
       });
@@ -542,8 +547,8 @@ export default function ServiceOrderDetails() {
         .from("appointments")
         .insert({
           title: order?.title || "Appointment",
-          start_time: startDateTime.toISOString(),
-          end_time: endDateTime.toISOString(),
+          start_time: startTimeUtc,
+          end_time: endTimeUtc,
           status: "draft" as const,
           created_by: user.id,
           tenant_id: profile.tenant_id,

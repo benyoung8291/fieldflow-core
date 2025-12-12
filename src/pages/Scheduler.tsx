@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Users, FileText, List, Undo2, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { ViewToggleButton } from "@/components/layout/ViewToggleButton";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addWeeks, subWeeks, addMonths, subMonths, setHours, setMinutes, addHours } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
+import { MELBOURNE_TZ } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -500,8 +502,8 @@ export default function Scheduler() {
         service_order_id: serviceOrderId,
         title: serviceOrder?.title || "New Appointment",
         description: serviceOrder?.description,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
+        start_time: fromZonedTime(startTime, MELBOURNE_TZ).toISOString(),
+        end_time: fromZonedTime(endTime, MELBOURNE_TZ).toISOString(),
         assigned_to: workerId,
         location_address: locationAddress,
         location_lat: locationLat,
