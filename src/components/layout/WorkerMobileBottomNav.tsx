@@ -84,8 +84,8 @@ export const WorkerMobileBottomNav = () => {
   // Don't show when not authenticated
   if (!isAuthenticated) return null;
 
-  // Only show on worker app routes (not on auth page)
-  if (!location.pathname.startsWith('/worker') || location.pathname === '/auth') return null;
+  // Only show on worker app routes (must start with /worker/ to avoid matching /worker-availability-calendar)
+  if (!location.pathname.startsWith('/worker/') || location.pathname === '/auth') return null;
 
   // Hide when in an active chat conversation for immersive experience
   // Only hide when viewing a specific chat channel (UUID format), show on /worker/chat list
