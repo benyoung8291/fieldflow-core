@@ -1,18 +1,39 @@
 import { useState, useMemo } from "react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, startOfWeek, endOfWeek } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, startOfWeek, endOfWeek } from "date-fns";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkerAvailabilityMonth } from "@/hooks/useWorkerAvailabilityMonth";
 import { WorkerAvailabilityDayCell } from "@/components/availability/WorkerAvailabilityDayCell";
+import { WorkerAvailabilityFilters } from "@/components/availability/WorkerAvailabilityFilters";
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function WorkerAvailabilityCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedStates, setSelectedStates] = useState<string[]>([]);
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
   
   const { workerAvailability, isLoading } = useWorkerAvailabilityMonth(currentMonth);
+
+  // Get unique workers for the filter dropdown
+  const allWorkers = useMemo(() => {
+    return workerAvailability.map(wa => wa.worker);
+  }, [workerAvailability]);
+
+  // Filter worker availability based on selected filters
+  const filteredAvailability = useMemo(() => {
+    return workerAvailability.filter(wa => {
+      if (selectedStates.length > 0 && !selectedStates.includes(wa.worker.worker_state || "")) {
+        return false;
+      }
+      if (selectedWorkerIds.length > 0 && !selectedWorkerIds.includes(wa.worker.id)) {
+        return false;
+      }
+      return true;
+    });
+  }, [workerAvailability, selectedStates, selectedWorkerIds]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
@@ -29,7 +50,7 @@ export default function WorkerAvailabilityCalendar() {
 
   const getAvailabilityForDate = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return workerAvailability.filter(wa => {
+    return filteredAvailability.filter(wa => {
       const dayData = wa.days.find(d => d.dateStr === dateStr);
       return dayData?.isAvailable;
     }).map(wa => ({
@@ -68,19 +89,32 @@ export default function WorkerAvailabilityCalendar() {
           </div>
         </div>
 
+        {/* Filters */}
+        <WorkerAvailabilityFilters
+          workers={allWorkers}
+          selectedStates={selectedStates}
+          setSelectedStates={setSelectedStates}
+          selectedWorkerIds={selectedWorkerIds}
+          setSelectedWorkerIds={setSelectedWorkerIds}
+        />
+
         {/* Legend */}
-        <div className="flex items-center gap-4 mb-4 text-sm">
+        <div className="flex items-center gap-4 mb-4 text-sm flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-success" />
             <span className="text-muted-foreground">Available</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-warning" />
-            <span className="text-muted-foreground">Seasonal</span>
+            <div className="w-3 h-3 rounded-full bg-orange-500" />
+            <span className="text-muted-foreground">Partially Assigned</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-destructive" />
-            <span className="text-muted-foreground">Unavailable</span>
+            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <span className="text-muted-foreground">Fully Booked</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-warning" />
+            <span className="text-muted-foreground">Seasonal</span>
           </div>
         </div>
 
@@ -114,7 +148,7 @@ export default function WorkerAvailabilityCalendar() {
               </div>
             ) : (
               <div className="grid grid-cols-7">
-                {calendarDays.map((date, idx) => {
+                {calendarDays.map((date) => {
                   const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
                   const isTodayDate = isToday(date);
                   const isWeekend = getDay(date) === 0 || getDay(date) === 6;
