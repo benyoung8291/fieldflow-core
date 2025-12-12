@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import DashboardLayout from "@/components/DashboardLayout";
 import { useWorkerAvailabilityMonth } from "@/hooks/useWorkerAvailabilityMonth";
 import { WorkerAvailabilityDayCell } from "@/components/availability/WorkerAvailabilityDayCell";
 import { WorkerAvailabilityFilters } from "@/components/availability/WorkerAvailabilityFilters";
@@ -60,10 +61,10 @@ export default function WorkerAvailabilityCalendar() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6">
+    <DashboardLayout>
+      <div className="space-y-6 pt-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <CalendarDays className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-semibold text-foreground">
@@ -99,7 +100,7 @@ export default function WorkerAvailabilityCalendar() {
         />
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mb-4 text-sm flex-wrap">
+        <div className="flex items-center gap-4 text-sm flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-success" />
             <span className="text-muted-foreground">Available</span>
@@ -170,6 +171,6 @@ export default function WorkerAvailabilityCalendar() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
