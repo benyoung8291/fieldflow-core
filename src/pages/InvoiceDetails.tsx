@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLogDetailPageAccess } from "@/hooks/useLogDetailPageAccess";
@@ -48,6 +48,8 @@ export default function InvoiceDetails() {
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [deleteInvoiceDialogOpen, setDeleteInvoiceDialogOpen] = useState(false);
+  const [invoiceDescription, setInvoiceDescription] = useState<string>("");
+  const [descriptionEdited, setDescriptionEdited] = useState(false);
   const { hasPermission } = usePermissions();
   const canEditInvoices = hasPermission("invoices", "edit");
   const canApproveInvoices = hasPermission("invoices", "approve");
@@ -228,6 +230,7 @@ export default function InvoiceDetails() {
         bank_account_number: settings?.bank_account_number || "",
         bank_account_name: settings?.bank_account_name || "",
         payment_instructions: settings?.payment_instructions || "",
+        terms_conditions: settings?.invoice_terms_conditions || "",
       } as CompanySettings;
     },
     enabled: !!invoice?.tenant_id,
@@ -703,6 +706,27 @@ export default function InvoiceDetails() {
     },
   });
 
+  const updateDescriptionMutation = useMutation({
+    mutationFn: async (description: string) => {
+      if (invoice?.acumatica_status === "Released") {
+        throw new Error("Cannot modify invoice - Released in MYOB Acumatica.");
+      }
+      const { error } = await supabase
+        .from("invoices")
+        .update({ description })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      setDescriptionEdited(false);
+      toast.success("Description updated");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update description");
+    },
+  });
+
   const syncAcumaticaStatusMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke(
@@ -769,6 +793,13 @@ export default function InvoiceDetails() {
       toast.error(error.message || "Failed to recalculate totals");
     },
   });
+
+  // Initialize description from invoice data
+  useEffect(() => {
+    if (invoice?.description !== undefined) {
+      setInvoiceDescription(invoice.description || "");
+    }
+  }, [invoice?.description]);
 
   if (isLoading || !invoice) {
     return (
@@ -1019,6 +1050,39 @@ export default function InvoiceDetails() {
                   )}
                 </div>
               </div>
+              
+              {/* Invoice Description - editable when draft */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Invoice Description</Label>
+                {canEdit ? (
+                  <div className="flex gap-2">
+                    <textarea
+                      className="flex-1 min-h-[60px] p-2 border rounded-md bg-background text-sm resize-y"
+                      placeholder="Enter invoice description..."
+                      value={invoiceDescription}
+                      onChange={(e) => {
+                        setInvoiceDescription(e.target.value);
+                        setDescriptionEdited(true);
+                      }}
+                    />
+                    {descriptionEdited && (
+                      <Button
+                        size="sm"
+                        onClick={() => updateDescriptionMutation.mutate(invoiceDescription)}
+                        disabled={updateDescriptionMutation.isPending}
+                      >
+                        {updateDescriptionMutation.isPending ? "Saving..." : "Save"}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground p-2 border rounded-md bg-muted/50">
+                    {invoiceDescription || "No description"}
+                  </div>
+                )}
+              </div>
+              
+              <Separator />
               
               {invoice.notes && (
                 <>

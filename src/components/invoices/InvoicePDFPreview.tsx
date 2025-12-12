@@ -64,7 +64,8 @@ export function InvoicePDFPreview({
     // Build source references and collect all unique locations
     let sourceServiceOrder = undefined;
     let sourceProject = undefined;
-    let invoiceDescription = '';
+    // Use invoice description if set, otherwise derive from source documents
+    let invoiceDescription = invoice.description || '';
     const uniqueLocations: Map<string, any> = new Map();
     
     // Build a map of source_id to location for line items
@@ -79,8 +80,8 @@ export function InvoicePDFPreview({
               work_order_number: doc.work_order_number,
               purchase_order_number: doc.purchase_order_number,
             };
-            // Use service order description as invoice description
-            if (doc.description) {
+            // Only use service order description if invoice description is empty
+            if (!invoiceDescription && doc.description) {
               invoiceDescription = doc.description;
             }
           }
@@ -91,6 +92,7 @@ export function InvoicePDFPreview({
           }
         } else if (doc.type === "project" && !sourceProject) {
           sourceProject = { name: doc.name };
+          // Only use project name if invoice description is empty
           if (!invoiceDescription && doc.name) {
             invoiceDescription = doc.name;
           }

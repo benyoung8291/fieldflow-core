@@ -4274,6 +4274,7 @@ export type Database = {
           created_at: string | null
           created_by: string
           customer_id: string | null
+          description: string | null
           due_date: string | null
           id: string
           invoice_date: string
@@ -4310,6 +4311,7 @@ export type Database = {
           created_at?: string | null
           created_by: string
           customer_id?: string | null
+          description?: string | null
           due_date?: string | null
           id?: string
           invoice_date?: string
@@ -4346,6 +4348,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           customer_id?: string | null
+          description?: string | null
           due_date?: string | null
           id?: string
           invoice_date?: string
@@ -8907,6 +8910,7 @@ export type Database = {
           created_at: string | null
           default_tax_rate: number | null
           id: string
+          invoice_terms_conditions: string | null
           logo_url: string | null
           payment_instructions: string | null
           postcode: string | null
@@ -8936,6 +8940,7 @@ export type Database = {
           created_at?: string | null
           default_tax_rate?: number | null
           id?: string
+          invoice_terms_conditions?: string | null
           logo_url?: string | null
           payment_instructions?: string | null
           postcode?: string | null
@@ -8965,6 +8970,7 @@ export type Database = {
           created_at?: string | null
           default_tax_rate?: number | null
           id?: string
+          invoice_terms_conditions?: string | null
           logo_url?: string | null
           payment_instructions?: string | null
           postcode?: string | null

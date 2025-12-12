@@ -33,6 +33,7 @@ export interface CompanySettings {
   bank_account_name?: string;
   payment_instructions?: string;
   accounts_email?: string;
+  terms_conditions?: string;
 }
 
 export interface CustomerInfo {
