@@ -35,14 +35,13 @@ import {
   Image as ImageIcon,
   Plus
 } from "lucide-react";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import TimeLogsTable from "@/components/service-orders/TimeLogsTable";
 import CreateTaskButton from "@/components/tasks/CreateTaskButton";
 import LinkedTasksList from "@/components/tasks/LinkedTasksList";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useViewMode } from "@/contexts/ViewModeContext";
-import { cn } from "@/lib/utils";
+import { cn, formatMelbourneTime } from "@/lib/utils";
 import AddressAutocomplete from "@/components/customers/AddressAutocomplete";
 import FieldReportsList from "@/components/field-reports/FieldReportsList";
 import { DocumentNotes } from "@/components/notes/DocumentNotes";
@@ -400,7 +399,7 @@ export default function AppointmentDetails() {
               <div className="flex-1 min-w-0">
                 <h1 className="text-base font-semibold truncate">{appointment.title}</h1>
                 <p className="text-xs text-muted-foreground truncate">
-                  {format(new Date(appointment.start_time), "MMM d, yyyy")}
+                  {formatMelbourneTime(appointment.start_time, "MMM d, yyyy")}
                 </p>
               </div>
               <Badge
@@ -451,10 +450,10 @@ export default function AppointmentDetails() {
                       <span className="text-xs font-medium">Time</span>
                     </div>
                     <p className="text-sm font-medium">
-                      {format(new Date(appointment.start_time), "h:mm a")}
+                      {formatMelbourneTime(appointment.start_time, "h:mm a")}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(appointment.end_time), "h:mm a")}
+                      {formatMelbourneTime(appointment.end_time, "h:mm a")}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -463,10 +462,10 @@ export default function AppointmentDetails() {
                       <span className="text-xs font-medium">Date</span>
                     </div>
                     <p className="text-sm font-medium">
-                      {format(new Date(appointment.start_time), "MMM d")}
+                      {formatMelbourneTime(appointment.start_time, "MMM d")}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(appointment.start_time), "yyyy")}
+                      {formatMelbourneTime(appointment.start_time, "yyyy")}
                     </p>
                   </div>
                 </div>
@@ -878,7 +877,7 @@ export default function AppointmentDetails() {
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Duration</Label>
                         <div className="h-11 flex items-center px-3 border rounded-md bg-muted/50 text-sm">
-                          {format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}
+                          {formatMelbourneTime(appointment.start_time, "h:mm a")} - {formatMelbourneTime(appointment.end_time, "h:mm a")}
                         </div>
                       </div>
                     </div>
@@ -931,10 +930,10 @@ export default function AppointmentDetails() {
                           <span className="text-xs font-medium uppercase tracking-wide">Date</span>
                         </div>
                         <p className="text-lg font-semibold">
-                          {format(new Date(appointment.start_time), "MMM d, yyyy")}
+                          {formatMelbourneTime(appointment.start_time, "MMM d, yyyy")}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(appointment.start_time), "EEEE")}
+                          {formatMelbourneTime(appointment.start_time, "EEEE")}
                         </p>
                       </div>
 
@@ -944,7 +943,7 @@ export default function AppointmentDetails() {
                           <span className="text-xs font-medium uppercase tracking-wide">Start</span>
                         </div>
                         <p className="text-lg font-semibold">
-                          {format(new Date(appointment.start_time), "h:mm a")}
+                          {formatMelbourneTime(appointment.start_time, "h:mm a")}
                         </p>
                       </div>
 
@@ -954,7 +953,7 @@ export default function AppointmentDetails() {
                           <span className="text-xs font-medium uppercase tracking-wide">End</span>
                         </div>
                         <p className="text-lg font-semibold">
-                          {format(new Date(appointment.end_time), "h:mm a")}
+                          {formatMelbourneTime(appointment.end_time, "h:mm a")}
                         </p>
                       </div>
                     </div>

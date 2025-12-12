@@ -5,8 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { cn, formatMelbourneTime } from "@/lib/utils";
 import { Clock, MapPin, User, Calendar } from "lucide-react";
 import DroppableStatusColumn from "./DroppableStatusColumn";
 import AppointmentContextMenu from "./AppointmentContextMenu";
@@ -203,14 +202,14 @@ function AppointmentCard({
         <CardContent className="p-2 pt-0 space-y-1">
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Calendar className="h-3 w-3" />
-            <span>{format(new Date(appointment.start_time), "MMM d")}</span>
+            <span>{formatMelbourneTime(appointment.start_time, "MMM d")}</span>
           </div>
           
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>
-              {format(new Date(appointment.start_time), "HH:mm")} - 
-              {format(new Date(appointment.end_time), "HH:mm")}
+              {formatMelbourneTime(appointment.start_time, "HH:mm")} - 
+              {formatMelbourneTime(appointment.end_time, "HH:mm")}
             </span>
           </div>
 

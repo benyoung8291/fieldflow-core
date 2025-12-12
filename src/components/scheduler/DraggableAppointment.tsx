@@ -1,8 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { format } from "date-fns";
 import { Clock, MapPin, MoreVertical, Repeat, Users } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatMelbourneTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,8 +134,8 @@ export default function DraggableAppointment({
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 <span>
-                  {format(new Date(appointment.start_time), "HH:mm")} - 
-                  {format(new Date(appointment.end_time), "HH:mm")}
+                  {formatMelbourneTime(appointment.start_time, "HH:mm")} - 
+                  {formatMelbourneTime(appointment.end_time, "HH:mm")}
                 </span>
               </div>
               {appointment.appointment_workers && appointment.appointment_workers.length > 0 && (
@@ -179,7 +178,7 @@ export default function DraggableAppointment({
               </div>
               <div className="flex items-center gap-1 mt-1">
                 <Clock className="h-3 w-3" />
-                <span>{format(new Date(appointment.start_time), "HH:mm")}</span>
+                <span>{formatMelbourneTime(appointment.start_time, "HH:mm")}</span>
               </div>
               {appointment.appointment_workers && appointment.appointment_workers.length > 1 && (
                 <div className="flex items-center gap-1 mt-1 text-[10px]">

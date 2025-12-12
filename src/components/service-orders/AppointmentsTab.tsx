@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, User, Clock, MoreVertical, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+import { formatMelbourneTime } from "@/lib/utils";
 import TimeLogsTable from "./TimeLogsTable";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -268,12 +268,12 @@ export default function AppointmentsTab({ serviceOrderId }: AppointmentsTabProps
                     <div className="space-y-3 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        <span>{format(new Date(appointment.start_time), "MMM d, yyyy")}</span>
+                        <span>{formatMelbourneTime(appointment.start_time, "MMM d, yyyy")}</span>
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         <span>
-                          {format(new Date(appointment.start_time), "h:mm a")} - {format(new Date(appointment.end_time), "h:mm a")}
+                          {formatMelbourneTime(appointment.start_time, "h:mm a")} - {formatMelbourneTime(appointment.end_time, "h:mm a")}
                         </span>
                       </div>
                       <div className="flex items-start gap-2">

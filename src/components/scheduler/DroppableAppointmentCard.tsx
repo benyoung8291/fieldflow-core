@@ -2,8 +2,7 @@ import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, FileText, X } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatMelbourneTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import AppointmentHoverCard from "./AppointmentHoverCard";
 import { useRef } from "react";
@@ -114,7 +113,7 @@ export default function DroppableAppointmentCard({
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
           <span>
-            {format(new Date(appointment.start_time), "HH:mm")} - {format(new Date(appointment.end_time), "HH:mm")}
+            {formatMelbourneTime(appointment.start_time, "HH:mm")} - {formatMelbourneTime(appointment.end_time, "HH:mm")}
           </span>
           <span className="font-semibold ml-1">
             ({calculateAppointmentHours(appointment)}h)
