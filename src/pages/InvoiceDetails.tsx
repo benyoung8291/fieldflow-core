@@ -30,6 +30,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePresenceSystem } from "@/hooks/usePresenceSystem";
 import { usePermissions } from "@/hooks/usePermissions";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { InvoicePDFPreview } from "@/components/invoices/InvoicePDFPreview";
+import { getDefaultTemplate } from "@/lib/pdf";
+import type { CompanySettings, UnifiedTemplate, DocumentType } from "@/lib/pdf/types";
 
 export default function InvoiceDetails() {
   const { id } = useParams();
@@ -176,6 +180,109 @@ export default function InvoiceDetails() {
     },
     enabled: !!id,
   });
+
+  // Fetch company settings for PDF preview
+  const { data: companySettings } = useQuery({
+    queryKey: ["company-settings-pdf", invoice?.tenant_id],
+    queryFn: async () => {
+      if (!invoice?.tenant_id) return null;
+      
+      const { data: tenantSettings } = await supabase
+        .from("tenant_settings" as any)
+        .select("*")
+        .eq("tenant_id", invoice.tenant_id)
+        .maybeSingle();
+
+      const settings = tenantSettings as any;
+      return {
+        company_name: settings?.company_name || "",
+        company_legal_name: settings?.company_legal_name || "",
+        logo_url: settings?.logo_url || undefined,
+        address: settings?.address_line_1 || "",
+        address_line_2: settings?.address_line_2 || "",
+        city: settings?.city || "",
+        state: settings?.state || "",
+        postcode: settings?.postcode || "",
+        phone: settings?.company_phone || "",
+        email: settings?.company_email || "",
+        website: settings?.company_website || "",
+        abn: settings?.abn || "",
+        default_tax_rate: settings?.default_tax_rate || 10,
+        bank_name: settings?.bank_name || "",
+        bank_bsb: settings?.bank_bsb || "",
+        bank_account_number: settings?.bank_account_number || "",
+        bank_account_name: settings?.bank_account_name || "",
+        payment_instructions: settings?.payment_instructions || "",
+      } as CompanySettings;
+    },
+    enabled: !!invoice?.tenant_id,
+  });
+
+  // Fetch full customer details for PDF preview
+  const { data: customerInfo } = useQuery({
+    queryKey: ["customer-info-pdf", invoice?.customer_id],
+    queryFn: async () => {
+      if (!invoice?.customer_id) return null;
+      
+      const { data: customer } = await supabase
+        .from("customers")
+        .select(`
+          id, name, legal_company_name, trading_name, abn, 
+          billing_address, billing_email, billing_phone,
+          address, city, state, postcode, email, phone
+        `)
+        .eq("id", invoice.customer_id)
+        .single();
+      
+      if (!customer) return null;
+
+      // Fetch primary billing contact
+      const { data: billingContact } = await supabase
+        .from("contacts")
+        .select("first_name, last_name, email, phone")
+        .eq("customer_id", invoice.customer_id)
+        .eq("is_primary", true)
+        .maybeSingle();
+
+      return {
+        ...customer,
+        contact_name: billingContact ? `${billingContact.first_name} ${billingContact.last_name}`.trim() : undefined,
+        billing_email: customer.billing_email || billingContact?.email,
+        billing_phone: customer.billing_phone || billingContact?.phone,
+      };
+    },
+    enabled: !!invoice?.customer_id,
+  });
+
+  // Fetch PDF template
+  const { data: pdfTemplate } = useQuery({
+    queryKey: ["pdf-template-invoice", invoice?.tenant_id],
+    queryFn: async () => {
+      if (!invoice?.tenant_id) return getDefaultTemplate("invoice");
+      
+      const { data: templateData } = await supabase
+        .from("pdf_templates")
+        .select("*")
+        .eq("tenant_id", invoice.tenant_id)
+        .eq("document_type", "invoice")
+        .eq("is_default", true)
+        .maybeSingle();
+
+      if (!templateData) return getDefaultTemplate("invoice");
+
+      return {
+        id: templateData.id,
+        name: templateData.name,
+        document_type: templateData.document_type as DocumentType,
+        field_mappings: (templateData.field_mappings as any) || {},
+        line_items_config: (templateData.line_items_config as any) || getDefaultTemplate("invoice").line_items_config,
+        content_zones: (templateData.content_zones as any) || getDefaultTemplate("invoice").content_zones,
+        page_settings: (templateData.page_settings as any) || getDefaultTemplate("invoice").page_settings,
+      } as UnifiedTemplate;
+    },
+    enabled: !!invoice?.tenant_id,
+  });
+
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
@@ -847,8 +954,8 @@ export default function InvoiceDetails() {
         />
       </div>
       
-      {/* PDF Download Button */}
-      <div className="flex justify-end">
+      {/* PDF Download Button - shown only on smaller screens where sidebar is hidden */}
+      <div className="flex justify-end lg:hidden">
         <InvoicePDFDownload
           invoiceId={id!}
           invoiceNumber={invoice.invoice_number}
@@ -1062,17 +1169,37 @@ export default function InvoiceDetails() {
 
   return (
     <>
-      <DocumentDetailLayout
-        title={`Invoice ${invoice.invoice_number}`}
-        subtitle="View and manage invoice details"
-        backPath="/invoices"
-        statusBadges={statusBadges}
-        primaryActions={primaryActions}
-        keyInfoSection={keyInfoSection}
-        tabs={tabs}
-        auditTableName="invoices"
-        auditRecordId={id!}
-      />
+      <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-4rem)]">
+        {/* Main Content Panel */}
+        <ResizablePanel defaultSize={60} minSize={40}>
+          <DocumentDetailLayout
+            title={`Invoice ${invoice.invoice_number}`}
+            subtitle="View and manage invoice details"
+            backPath="/invoices"
+            statusBadges={statusBadges}
+            primaryActions={primaryActions}
+            keyInfoSection={keyInfoSection}
+            tabs={tabs}
+            auditTableName="invoices"
+            auditRecordId={id!}
+          />
+        </ResizablePanel>
+        
+        {/* PDF Preview Sidebar - hidden on small screens */}
+        <ResizableHandle withHandle className="hidden lg:flex" />
+        <ResizablePanel defaultSize={40} minSize={25} className="hidden lg:block">
+          <div className="h-full border-l">
+            <InvoicePDFPreview
+              invoice={invoice}
+              lineItems={lineItems?.lineItems || []}
+              sourceDocuments={lineItems?.sourceDocuments}
+              companySettings={companySettings || null}
+              template={pdfTemplate || null}
+              customerInfo={customerInfo}
+            />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {editingItem && (
         <EditInvoiceLineDialog
