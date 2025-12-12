@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -213,7 +214,17 @@ export function OnboardingWizard() {
               <div className="border rounded-lg p-4 bg-muted/50">
                 <div
                   className="prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: currentStep.content }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(currentStep.content, {
+                      ALLOWED_TAGS: [
+                        'p', 'br', 'strong', 'b', 'em', 'i', 'u',
+                        'ul', 'ol', 'li', 'a', 
+                        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                        'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
+                      ],
+                      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style']
+                    })
+                  }}
                 />
               </div>
             )}
