@@ -25,212 +25,283 @@ const createStyles = (pageSettings: PageSettings) =>
       backgroundColor: "#ffffff",
       paddingTop: pageSettings.margins.top,
       paddingRight: pageSettings.margins.right,
-      paddingBottom: pageSettings.margins.bottom,
+      paddingBottom: 60,
       paddingLeft: pageSettings.margins.left,
       fontFamily: "Helvetica",
+      fontSize: 9,
     },
+    // Header section
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: 20,
-      paddingBottom: 15,
-      borderBottomWidth: 2,
-      borderBottomColor: "#3b82f6",
+      marginBottom: 15,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: "#d1d5db",
     },
     headerLeft: {
       flex: 1,
     },
     headerRight: {
-      alignItems: "flex-end",
+      width: 180,
     },
     logo: {
-      width: 120,
-      height: 60,
+      width: 100,
+      height: 50,
       objectFit: "contain",
-      marginBottom: 8,
+      marginBottom: 6,
     },
     companyName: {
-      fontSize: 18,
+      fontSize: 14,
       fontWeight: "bold",
       color: "#1f2937",
-      marginBottom: 4,
+      marginBottom: 3,
     },
     companyInfo: {
-      fontSize: 9,
-      color: "#6b7280",
+      fontSize: 8,
+      color: "#4b5563",
       lineHeight: 1.4,
     },
-    documentTitle: {
-      fontSize: 28,
+    // Document info rows (right side of header)
+    docInfoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 3,
+    },
+    docInfoLabel: {
+      fontSize: 9,
+      color: "#4b5563",
+    },
+    docInfoValue: {
+      fontSize: 9,
+      color: "#1f2937",
+      fontWeight: "bold",
+    },
+    // Bill To / Ship To section
+    addressSection: {
+      flexDirection: "row",
+      marginBottom: 15,
+      gap: 20,
+    },
+    addressColumn: {
+      flex: 1,
+    },
+    addressLabel: {
+      fontSize: 9,
       fontWeight: "bold",
       color: "#1f2937",
       marginBottom: 4,
+      paddingBottom: 3,
+      borderBottomWidth: 1,
+      borderBottomColor: "#e5e7eb",
     },
-    documentNumber: {
-      fontSize: 11,
-      color: "#6b7280",
-      marginBottom: 4,
-    },
-    documentDate: {
+    addressName: {
       fontSize: 10,
-      color: "#6b7280",
-    },
-    infoSection: {
-      flexDirection: "row",
-      marginBottom: 20,
-      gap: 30,
-    },
-    infoColumn: {
-      flex: 1,
-    },
-    infoLabel: {
-      fontSize: 8,
-      fontWeight: "bold",
-      color: "#9ca3af",
-      marginBottom: 4,
-      textTransform: "uppercase",
-    },
-    infoValue: {
-      fontSize: 10,
-      color: "#374151",
-      lineHeight: 1.5,
-    },
-    infoValueBold: {
-      fontSize: 11,
       fontWeight: "bold",
       color: "#1f2937",
       marginBottom: 2,
     },
-    lineItemsSection: {
-      marginBottom: 20,
+    addressTradingAs: {
+      fontSize: 8,
+      color: "#6b7280",
+      marginBottom: 2,
     },
-    totalsSection: {
-      alignSelf: "flex-end",
-      width: 200,
+    addressText: {
+      fontSize: 9,
+      color: "#374151",
+      lineHeight: 1.4,
+    },
+    addressAbn: {
+      fontSize: 8,
+      color: "#6b7280",
+      marginTop: 2,
+    },
+    // Invoice description header
+    invoiceDescriptionSection: {
+      backgroundColor: "#f3f4f6",
+      padding: 8,
+      marginBottom: 10,
+      borderRadius: 2,
+    },
+    invoiceDescription: {
+      fontSize: 10,
+      fontWeight: "bold",
+      color: "#1f2937",
+    },
+    // Line items section
+    lineItemsSection: {
+      marginBottom: 15,
+    },
+    // Bottom section with payment left and totals right
+    bottomSection: {
+      flexDirection: "row",
+      justifyContent: "space-between",
       marginTop: 10,
-      paddingTop: 10,
-      borderTopWidth: 1,
-      borderTopColor: "#e5e7eb",
+    },
+    // Payment details (left side)
+    paymentSection: {
+      width: "45%",
+      padding: 10,
+      backgroundColor: "#f9fafb",
+      borderRadius: 3,
+      borderWidth: 1,
+      borderColor: "#e5e7eb",
+    },
+    paymentTitle: {
+      fontSize: 10,
+      fontWeight: "bold",
+      color: "#1f2937",
+      marginBottom: 8,
+      paddingBottom: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: "#e5e7eb",
+    },
+    paymentRow: {
+      flexDirection: "row",
+      marginBottom: 3,
+    },
+    paymentLabel: {
+      fontSize: 9,
+      color: "#4b5563",
+      width: 80,
+    },
+    paymentValue: {
+      fontSize: 9,
+      color: "#1f2937",
+      fontWeight: "bold",
+      flex: 1,
+    },
+    // Totals section (right side)
+    totalsSection: {
+      width: "40%",
     },
     totalsRow: {
       flexDirection: "row",
       justifyContent: "space-between",
       paddingVertical: 4,
+      paddingHorizontal: 8,
+    },
+    totalsRowAlt: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      backgroundColor: "#f9fafb",
     },
     totalsLabel: {
-      fontSize: 10,
-      color: "#6b7280",
+      fontSize: 9,
+      color: "#4b5563",
     },
     totalsValue: {
-      fontSize: 10,
-      color: "#374151",
+      fontSize: 9,
+      color: "#1f2937",
       fontWeight: "bold",
     },
     totalsFinal: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingVertical: 8,
-      marginTop: 4,
-      borderTopWidth: 2,
-      borderTopColor: "#3b82f6",
+      paddingVertical: 6,
+      paddingHorizontal: 8,
+      backgroundColor: "#1f2937",
+      marginTop: 2,
     },
     totalsFinalLabel: {
-      fontSize: 12,
+      fontSize: 10,
       fontWeight: "bold",
-      color: "#1f2937",
+      color: "#ffffff",
     },
     totalsFinalValue: {
-      fontSize: 12,
+      fontSize: 10,
+      fontWeight: "bold",
+      color: "#ffffff",
+    },
+    balanceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 6,
+      paddingHorizontal: 8,
+      backgroundColor: "#fef3c7",
+      borderWidth: 1,
+      borderColor: "#f59e0b",
+      marginTop: 2,
+    },
+    balanceLabel: {
+      fontSize: 10,
+      fontWeight: "bold",
+      color: "#92400e",
+    },
+    balanceValue: {
+      fontSize: 10,
+      fontWeight: "bold",
+      color: "#92400e",
+    },
+    // Reference section
+    referenceSection: {
+      marginTop: 15,
+      padding: 8,
+      backgroundColor: "#f9fafb",
+      borderRadius: 3,
+    },
+    referenceTitle: {
+      fontSize: 9,
       fontWeight: "bold",
       color: "#1f2937",
+      marginBottom: 4,
     },
+    referenceRow: {
+      flexDirection: "row",
+      marginBottom: 2,
+    },
+    referenceLabel: {
+      fontSize: 8,
+      color: "#6b7280",
+      width: 100,
+    },
+    referenceValue: {
+      fontSize: 8,
+      color: "#374151",
+      fontWeight: "bold",
+    },
+    // Notes section
     notesSection: {
-      marginTop: 20,
-      paddingTop: 15,
+      marginTop: 15,
+      paddingTop: 10,
       borderTopWidth: 1,
       borderTopColor: "#e5e7eb",
     },
     notesTitle: {
-      fontSize: 10,
+      fontSize: 9,
       fontWeight: "bold",
       color: "#374151",
-      marginBottom: 6,
+      marginBottom: 4,
     },
     notesText: {
-      fontSize: 9,
+      fontSize: 8,
       color: "#6b7280",
-      lineHeight: 1.5,
+      lineHeight: 1.4,
     },
+    // Footer
     footer: {
       position: "absolute",
-      bottom: 30,
+      bottom: 20,
       left: 40,
       right: 40,
-      textAlign: "center",
-      fontSize: 8,
-      color: "#9ca3af",
       borderTopWidth: 1,
       borderTopColor: "#e5e7eb",
-      paddingTop: 10,
+      paddingTop: 8,
     },
-    referenceSection: {
-      marginBottom: 15,
-      padding: 10,
-      backgroundColor: "#f9fafb",
-      borderRadius: 4,
-    },
-    referenceRow: {
+    footerContent: {
       flexDirection: "row",
-      marginBottom: 4,
+      justifyContent: "space-between",
+      alignItems: "center",
     },
-    referenceLabel: {
-      fontSize: 9,
-      color: "#6b7280",
-      width: 120,
-    },
-    referenceValue: {
-      fontSize: 9,
-      color: "#374151",
-      fontWeight: "bold",
-    },
-    paymentSection: {
-      marginTop: 20,
-      padding: 12,
-      backgroundColor: "#eff6ff",
-      borderRadius: 4,
-      borderLeftWidth: 4,
-      borderLeftColor: "#3b82f6",
-    },
-    paymentTitle: {
-      fontSize: 11,
-      fontWeight: "bold",
-      color: "#1f2937",
-      marginBottom: 8,
-    },
-    paymentRow: {
-      flexDirection: "row",
-      marginBottom: 4,
-    },
-    paymentLabel: {
-      fontSize: 9,
-      color: "#6b7280",
-      width: 100,
-    },
-    paymentValue: {
-      fontSize: 9,
-      color: "#374151",
-      fontWeight: "bold",
-    },
-    paymentInstructions: {
+    footerRemittance: {
       fontSize: 8,
-      color: "#6b7280",
-      marginTop: 8,
-      fontStyle: "italic",
+      color: "#4b5563",
     },
-    customerAbn: {
-      fontSize: 9,
-      color: "#6b7280",
-      marginTop: 2,
+    footerPageNumber: {
+      fontSize: 8,
+      color: "#9ca3af",
     },
   });
 
@@ -252,9 +323,13 @@ export function InvoicePDFDocument({
   const hasSourceReferences = documentData.source_service_order || documentData.source_project;
   const hasBankDetails = companySettings.bank_name || companySettings.bank_bsb || companySettings.bank_account_number;
   
+  // Calculate balance
+  const amountPaid = documentData.amount_paid || 0;
+  const balance = (documentData.total || 0) - amountPaid;
+  
   return (
     <Document>
-      <Page size={template.page_settings.size} style={styles.page}>
+      <Page size={template.page_settings.size} style={styles.page} wrap>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -268,69 +343,183 @@ export function InvoicePDFDocument({
               {"\n"}
               {[companySettings.city, companySettings.state, companySettings.postcode]
                 .filter(Boolean)
-                .join(", ")}
+                .join(" ")}
               {"\n"}
-              {companySettings.phone && `Phone: ${companySettings.phone}`}
+              {companySettings.phone && `Ph: ${companySettings.phone}`}
               {companySettings.email && `  |  ${companySettings.email}`}
+              {companySettings.website && `\n${companySettings.website}`}
               {"\n"}
               {companySettings.abn && `ABN: ${companySettings.abn}`}
             </Text>
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.documentTitle}>TAX INVOICE</Text>
-            <Text style={styles.documentNumber}>#{documentData.document_number}</Text>
-            <Text style={styles.documentDate}>Date: {documentData.document_date}</Text>
+            <View style={styles.docInfoRow}>
+              <Text style={styles.docInfoLabel}>Invoice Nbr:</Text>
+              <Text style={styles.docInfoValue}>{documentData.document_number}</Text>
+            </View>
+            <View style={styles.docInfoRow}>
+              <Text style={styles.docInfoLabel}>Date:</Text>
+              <Text style={styles.docInfoValue}>{documentData.document_date}</Text>
+            </View>
             {documentData.due_date && (
-              <Text style={styles.documentDate}>Due: {documentData.due_date}</Text>
+              <View style={styles.docInfoRow}>
+                <Text style={styles.docInfoLabel}>Due Date:</Text>
+                <Text style={styles.docInfoValue}>{documentData.due_date}</Text>
+              </View>
+            )}
+            <View style={styles.docInfoRow}>
+              <Text style={styles.docInfoLabel}>Credit Terms:</Text>
+              <Text style={styles.docInfoValue}>{documentData.payment_terms || "Due on Receipt"}</Text>
+            </View>
+            {documentData.customer_id && (
+              <View style={styles.docInfoRow}>
+                <Text style={styles.docInfoLabel}>Customer ID:</Text>
+                <Text style={styles.docInfoValue}>{documentData.customer_id}</Text>
+              </View>
             )}
           </View>
         </View>
         
-        {/* Customer Info */}
-        <View style={styles.infoSection}>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoLabel}>Bill To</Text>
+        {/* Bill To / Ship To Section */}
+        <View style={styles.addressSection}>
+          <View style={styles.addressColumn}>
+            <Text style={styles.addressLabel}>Bill To:</Text>
             {documentData.customer?.legal_name && documentData.customer.legal_name !== documentData.customer.name ? (
               <>
-                <Text style={styles.infoValueBold}>{documentData.customer.legal_name}</Text>
-                <Text style={styles.infoValue}>Trading as: {documentData.customer.name}</Text>
+                <Text style={styles.addressName}>{documentData.customer.legal_name}</Text>
+                <Text style={styles.addressTradingAs}>Trading as: {documentData.customer.name}</Text>
               </>
             ) : (
-              <Text style={styles.infoValueBold}>{documentData.customer?.name}</Text>
+              <Text style={styles.addressName}>{documentData.customer?.name}</Text>
             )}
             {documentData.customer?.contact_name && (
-              <Text style={styles.infoValue}>Attn: {documentData.customer.contact_name}</Text>
+              <Text style={styles.addressText}>Attn: {documentData.customer.contact_name}</Text>
             )}
-            <Text style={styles.infoValue}>
+            <Text style={styles.addressText}>
               {documentData.customer?.address}
               {"\n"}
               {[documentData.customer?.city, documentData.customer?.state, documentData.customer?.postcode]
                 .filter(Boolean)
-                .join(", ")}
+                .join(" ")}
             </Text>
             {documentData.customer?.abn && (
-              <Text style={styles.customerAbn}>ABN: {documentData.customer.abn}</Text>
+              <Text style={styles.addressAbn}>ABN: {documentData.customer.abn}</Text>
             )}
-            {documentData.customer?.billing_email && (
-              <Text style={styles.infoValue}>{documentData.customer.billing_email}</Text>
+            {documentData.customer?.phone && (
+              <Text style={styles.addressText}>Ph: {documentData.customer.phone}</Text>
             )}
           </View>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoLabel}>Payment Terms</Text>
-            <Text style={styles.infoValueBold}>{documentData.payment_terms || "Due on Receipt"}</Text>
-            {documentData.due_date && (
+          <View style={styles.addressColumn}>
+            <Text style={styles.addressLabel}>Ship To:</Text>
+            {documentData.ship_to ? (
               <>
-                <Text style={styles.infoLabel}>Amount Due</Text>
-                <Text style={styles.infoValueBold}>{formatCurrency(documentData.total)}</Text>
+                <Text style={styles.addressName}>{documentData.ship_to.name}</Text>
+                <Text style={styles.addressText}>
+                  {documentData.ship_to.address}
+                  {"\n"}
+                  {[documentData.ship_to.city, documentData.ship_to.state, documentData.ship_to.postcode]
+                    .filter(Boolean)
+                    .join(" ")}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.addressName}>{documentData.customer?.name}</Text>
+                <Text style={styles.addressText}>
+                  {documentData.customer?.address}
+                  {"\n"}
+                  {[documentData.customer?.city, documentData.customer?.state, documentData.customer?.postcode]
+                    .filter(Boolean)
+                    .join(" ")}
+                </Text>
               </>
             )}
+          </View>
+        </View>
+        
+        {/* Invoice Description Header */}
+        {documentData.invoice_description && (
+          <View style={styles.invoiceDescriptionSection}>
+            <Text style={styles.invoiceDescription}>{documentData.invoice_description}</Text>
+          </View>
+        )}
+        
+        {/* Line Items */}
+        <View style={styles.lineItemsSection}>
+          <DynamicLineItemsTable
+            lineItems={lineItems}
+            config={template.line_items_config}
+          />
+        </View>
+        
+        {/* Bottom Section: Payment Details Left + Totals Right */}
+        <View style={styles.bottomSection}>
+          {/* Payment Details - Left Side */}
+          {hasBankDetails ? (
+            <View style={styles.paymentSection}>
+              <Text style={styles.paymentTitle}>Payment Details:</Text>
+              {companySettings.bank_account_name && (
+                <View style={styles.paymentRow}>
+                  <Text style={styles.paymentLabel}>Account Name:</Text>
+                  <Text style={styles.paymentValue}>{companySettings.bank_account_name}</Text>
+                </View>
+              )}
+              {companySettings.bank_name && (
+                <View style={styles.paymentRow}>
+                  <Text style={styles.paymentLabel}>Bank:</Text>
+                  <Text style={styles.paymentValue}>{companySettings.bank_name}</Text>
+                </View>
+              )}
+              {companySettings.bank_bsb && (
+                <View style={styles.paymentRow}>
+                  <Text style={styles.paymentLabel}>BSB:</Text>
+                  <Text style={styles.paymentValue}>{companySettings.bank_bsb}</Text>
+                </View>
+              )}
+              {companySettings.bank_account_number && (
+                <View style={styles.paymentRow}>
+                  <Text style={styles.paymentLabel}>Account No:</Text>
+                  <Text style={styles.paymentValue}>{companySettings.bank_account_number}</Text>
+                </View>
+              )}
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Reference:</Text>
+                <Text style={styles.paymentValue}>{documentData.document_number}</Text>
+              </View>
+            </View>
+          ) : (
+            <View style={{ width: "45%" }} />
+          )}
+          
+          {/* Totals - Right Side */}
+          <View style={styles.totalsSection}>
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>Sub Total:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(documentData.subtotal)}</Text>
+            </View>
+            <View style={styles.totalsRowAlt}>
+              <Text style={styles.totalsLabel}>Tax Total:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(documentData.tax_amount)}</Text>
+            </View>
+            <View style={styles.totalsFinal}>
+              <Text style={styles.totalsFinalLabel}>Total (AUD):</Text>
+              <Text style={styles.totalsFinalValue}>{formatCurrency(documentData.total)}</Text>
+            </View>
+            <View style={styles.totalsRowAlt}>
+              <Text style={styles.totalsLabel}>Paid:</Text>
+              <Text style={styles.totalsValue}>{formatCurrency(amountPaid)}</Text>
+            </View>
+            <View style={styles.balanceRow}>
+              <Text style={styles.balanceLabel}>Balance:</Text>
+              <Text style={styles.balanceValue}>{formatCurrency(balance)}</Text>
+            </View>
           </View>
         </View>
         
         {/* Source Document References */}
         {hasSourceReferences && (
           <View style={styles.referenceSection}>
-            <Text style={styles.infoLabel}>Reference Details</Text>
+            <Text style={styles.referenceTitle}>Reference Details</Text>
             {documentData.source_service_order && (
               <>
                 <View style={styles.referenceRow}>
@@ -345,7 +534,7 @@ export function InvoicePDFDocument({
                 )}
                 {documentData.source_service_order.purchase_order_number && (
                   <View style={styles.referenceRow}>
-                    <Text style={styles.referenceLabel}>Purchase Order #:</Text>
+                    <Text style={styles.referenceLabel}>PO #:</Text>
                     <Text style={styles.referenceValue}>{documentData.source_service_order.purchase_order_number}</Text>
                   </View>
                 )}
@@ -360,68 +549,6 @@ export function InvoicePDFDocument({
           </View>
         )}
         
-        {/* Line Items */}
-        <View style={styles.lineItemsSection}>
-          <DynamicLineItemsTable
-            lineItems={lineItems}
-            config={template.line_items_config}
-          />
-        </View>
-        
-        {/* Totals */}
-        <View style={styles.totalsSection}>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Subtotal</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(documentData.subtotal)}</Text>
-          </View>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>GST (10%)</Text>
-            <Text style={styles.totalsValue}>{formatCurrency(documentData.tax_amount)}</Text>
-          </View>
-          <View style={styles.totalsFinal}>
-            <Text style={styles.totalsFinalLabel}>Total (Inc. GST)</Text>
-            <Text style={styles.totalsFinalValue}>{formatCurrency(documentData.total)}</Text>
-          </View>
-        </View>
-        
-        {/* Payment Details */}
-        {hasBankDetails && (
-          <View style={styles.paymentSection}>
-            <Text style={styles.paymentTitle}>Payment Details</Text>
-            {companySettings.bank_name && (
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Bank:</Text>
-                <Text style={styles.paymentValue}>{companySettings.bank_name}</Text>
-              </View>
-            )}
-            {companySettings.bank_bsb && (
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>BSB:</Text>
-                <Text style={styles.paymentValue}>{companySettings.bank_bsb}</Text>
-              </View>
-            )}
-            {companySettings.bank_account_number && (
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Account No:</Text>
-                <Text style={styles.paymentValue}>{companySettings.bank_account_number}</Text>
-              </View>
-            )}
-            {companySettings.bank_account_name && (
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Account Name:</Text>
-                <Text style={styles.paymentValue}>{companySettings.bank_account_name}</Text>
-              </View>
-            )}
-            <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Reference:</Text>
-              <Text style={styles.paymentValue}>{documentData.document_number}</Text>
-            </View>
-            {companySettings.payment_instructions && (
-              <Text style={styles.paymentInstructions}>{companySettings.payment_instructions}</Text>
-            )}
-          </View>
-        )}
-        
         {/* Notes */}
         {documentData.notes && (
           <View style={styles.notesSection}>
@@ -430,11 +557,20 @@ export function InvoicePDFDocument({
           </View>
         )}
         
-        {/* Footer */}
+        {/* Footer with remittance and page numbers */}
         <View style={styles.footer} fixed>
-          <Text>
-            {companySettings.company_name} | {companySettings.website || companySettings.email}
-          </Text>
+          <View style={styles.footerContent}>
+            <Text style={styles.footerRemittance}>
+              {companySettings.accounts_email 
+                ? `Please send remittance to ${companySettings.accounts_email}` 
+                : companySettings.email 
+                  ? `Please send remittance to ${companySettings.email}`
+                  : `Thank you for your business`}
+            </Text>
+            <Text style={styles.footerPageNumber} render={({ pageNumber, totalPages }) => (
+              `Page: ${pageNumber} of ${totalPages}`
+            )} />
+          </View>
         </View>
       </Page>
     </Document>
