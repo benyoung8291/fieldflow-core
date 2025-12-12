@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatMelbourneTime } from "@/lib/utils";
 
 interface AppointmentDetailProps {
   appointmentId: string;
@@ -142,12 +142,7 @@ export function AppointmentDetail({ appointmentId }: AppointmentDetailProps) {
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Date</p>
                 <p className="text-sm font-semibold">
-                  {new Date(appointment.start_time).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
+                  {formatMelbourneTime(appointment.start_time, "EEE, MMM d, yyyy")}
                 </p>
               </div>
             </div>
@@ -163,17 +158,9 @@ export function AppointmentDetail({ appointmentId }: AppointmentDetailProps) {
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Time</p>
                 <p className="text-sm font-semibold">
-                  {new Date(appointment.start_time).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
+                  {formatMelbourneTime(appointment.start_time, "h:mm a")}
                   {' - '}
-                  {new Date(appointment.end_time).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
+                  {formatMelbourneTime(appointment.end_time, "h:mm a")}
                 </p>
               </div>
             </div>
@@ -297,13 +284,7 @@ export function AppointmentDetail({ appointmentId }: AppointmentDetailProps) {
             </p>
             {appointment.completion_reported_at && (
               <p className="text-xs text-muted-foreground mt-2">
-                Completed on {new Date(appointment.completion_reported_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit'
-                })}
+                Completed on {formatMelbourneTime(appointment.completion_reported_at, "MMMM d, yyyy h:mm a")}
               </p>
             )}
           </CardContent>

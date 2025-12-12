@@ -1,9 +1,14 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { toZonedTime } from "date-fns-tz";
+import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 
 // Melbourne, Australia timezone
 export const MELBOURNE_TZ = "Australia/Melbourne";
+
+// Common format patterns for Melbourne timezone display
+export const MELBOURNE_DATE_FORMAT = "MMM d, yyyy";
+export const MELBOURNE_TIME_FORMAT = "h:mm a";
+export const MELBOURNE_DATETIME_FORMAT = "MMM d, yyyy h:mm a";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -22,6 +27,16 @@ export function getMelbourneNow(): Date {
 export function toMelbourneTime(date: string | Date): Date {
   const dateObj = typeof date === "string" ? new Date(date) : date;
   return toZonedTime(dateObj, MELBOURNE_TZ);
+}
+
+/**
+ * Format a date in Melbourne timezone with specified format string
+ * Use this for displaying appointment/service order times to ensure
+ * all users see the same "wall clock" time regardless of their location
+ */
+export function formatMelbourneTime(date: string | Date, formatStr: string): string {
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  return formatInTimeZone(dateObj, MELBOURNE_TZ, formatStr);
 }
 
 /**

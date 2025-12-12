@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, DollarSign, ArrowUpDown } from "lucide-react";
-import { format } from "date-fns";
+import { formatMelbourneTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
@@ -280,8 +280,8 @@ export default function Appointments() {
                 status={appointment.status}
                 statusColor={statusColors[appointment.status as keyof typeof statusColors].split(" ")[0]}
                 metadata={[
-                  { label: "Date", value: format(new Date(appointment.start_time), "MMM d, yyyy") },
-                  { label: "Time", value: format(new Date(appointment.start_time), "h:mm a") },
+                  { label: "Date", value: formatMelbourneTime(appointment.start_time, "MMM d, yyyy") },
+                  { label: "Time", value: formatMelbourneTime(appointment.start_time, "h:mm a") },
                   { label: "Est. Hours", value: `${appointment.estimatedHours.toFixed(2)} hrs` },
                   { label: "Cost", value: `$${appointment.currentCost.toFixed(2)}` },
                 ]}
@@ -396,11 +396,11 @@ export default function Appointments() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-sm">
                               <Calendar className="h-4 w-4 text-muted-foreground" />
-                              {format(new Date(appointment.start_time), "MMM d, yyyy")}
+                              {formatMelbourneTime(appointment.start_time, "MMM d, yyyy")}
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Clock className="h-4 w-4" />
-                              {format(new Date(appointment.start_time), "h:mm a")}
+                              {formatMelbourneTime(appointment.start_time, "h:mm a")}
                             </div>
                           </div>
                         </Link>

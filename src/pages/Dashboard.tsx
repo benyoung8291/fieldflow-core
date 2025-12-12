@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ClipboardList, Users, Calendar, FileText, Briefcase, DollarSign, CheckSquare, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfDay, endOfDay, startOfMonth, format } from "date-fns";
+import { startOfDay, endOfDay, startOfMonth } from "date-fns";
+import { formatMelbourneTime } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { TodaysTasks } from "@/components/dashboard/TodaysTasks";
 import { PerrAIAssistant } from "@/components/dashboard/PerrAIAssistant";
@@ -294,7 +295,7 @@ export default function Dashboard() {
                       className="flex items-center gap-3 p-4 bg-muted/30 border border-border/50 rounded-lg hover:bg-muted/50 hover:shadow-md cursor-pointer transition-all duration-200"
                     >
                       <div className="text-xs font-bold text-primary bg-primary/10 px-3 py-2 rounded-lg flex-shrink-0 border border-primary/20">
-                        {format(new Date(appointment.start_time), "hh:mm a")}
+                        {formatMelbourneTime(appointment.start_time, "hh:mm a")}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{appointment.title}</p>
