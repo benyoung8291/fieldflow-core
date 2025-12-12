@@ -105,8 +105,58 @@ export default function WorkerCalendar() {
 
   const saveAvailability = useMutation({
     mutationFn: async () => {
+      const saveStartTime = new Date().toISOString();
+      
+      // Pre-save validation logging
+      console.log("[WorkerCalendar] Save initiated", {
+        timestamp: saveStartTime,
+        userId: workerData?.user?.id,
+        tenantId: workerData?.profile?.tenant_id,
+        isUnavailable,
+        availabilityData: availability,
+        recordCounts: {
+          newRecords: Object.values(availability).filter(a => !a.id).length,
+          existingRecords: Object.values(availability).filter(a => a.id).length,
+        }
+      });
+
       if (!workerData?.user?.id || !workerData?.profile?.tenant_id) {
+        console.error("[WorkerCalendar] Missing user data", {
+          hasUserId: !!workerData?.user?.id,
+          hasTenantId: !!workerData?.profile?.tenant_id,
+          workerData: workerData,
+        });
         throw new Error("User data not loaded");
+      }
+
+      // Session validation
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      console.log("[WorkerCalendar] Session check", {
+        hasSession: !!sessionData?.session,
+        sessionExpiry: sessionData?.session?.expires_at,
+        sessionExpiryDate: sessionData?.session?.expires_at 
+          ? new Date(sessionData.session.expires_at * 1000).toISOString() 
+          : null,
+        isExpired: sessionData?.session?.expires_at 
+          ? (sessionData.session.expires_at * 1000) < Date.now() 
+          : null,
+        sessionError: sessionError?.message,
+        userId: sessionData?.session?.user?.id,
+        matchesWorkerData: sessionData?.session?.user?.id === workerData.user.id,
+      });
+
+      if (sessionError) {
+        console.error("[WorkerCalendar] Session error", {
+          code: sessionError.code,
+          message: sessionError.message,
+          name: sessionError.name,
+        });
+        throw new Error(`Session error: ${sessionError.message}`);
+      }
+
+      if (!sessionData?.session) {
+        console.error("[WorkerCalendar] No active session found");
+        throw new Error("No active session - please log in again");
       }
 
       // Build updates, excluding undefined ids for new records
@@ -120,31 +170,108 @@ export default function WorkerCalendar() {
         end_time: data.end_time,
       }));
 
-      // Upsert all availability records
-      const { error: availError } = await supabase
-        .from("worker_availability")
-        .upsert(updates as any, { onConflict: 'worker_id,day_of_week' });
+      // Log upsert request
+      console.log("[WorkerCalendar] Upserting availability", {
+        recordCount: updates.length,
+        payload: updates,
+        conflictTarget: 'worker_id,day_of_week',
+      });
 
-      if (availError) throw availError;
+      // Upsert all availability records
+      const { data: availData, error: availError } = await supabase
+        .from("worker_availability")
+        .upsert(updates as any, { onConflict: 'worker_id,day_of_week' })
+        .select();
+
+      // Log upsert response
+      console.log("[WorkerCalendar] Availability upsert result", {
+        success: !availError,
+        error: availError ? {
+          code: availError.code,
+          message: availError.message,
+          details: availError.details,
+          hint: availError.hint,
+        } : null,
+        returnedRecords: availData?.length,
+        returnedData: availData,
+      });
+
+      if (availError) {
+        console.error("[WorkerCalendar] Availability upsert FAILED", {
+          error: availError,
+          payload: updates,
+        });
+        throw availError;
+      }
 
       // Update profile status
       const newStatus = isUnavailable ? 'unavailable' : 'available';
-      const { error: profileError } = await supabase
+      
+      // Log profile update request
+      console.log("[WorkerCalendar] Updating profile status", {
+        userId: workerData.user.id,
+        newStatus: newStatus,
+        previousStatus: workerData.profile?.status,
+      });
+
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .update({ 
           status: newStatus,
           status_updated_at: new Date().toISOString()
         })
-        .eq('id', workerData.user.id);
+        .eq('id', workerData.user.id)
+        .select();
 
-      if (profileError) throw profileError;
+      // Log profile update response
+      console.log("[WorkerCalendar] Profile update result", {
+        success: !profileError,
+        error: profileError ? {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+        } : null,
+        updatedRecord: profileData?.[0],
+      });
+
+      if (profileError) {
+        console.error("[WorkerCalendar] Profile update FAILED", {
+          error: profileError,
+          userId: workerData.user.id,
+          attemptedStatus: newStatus,
+        });
+        throw profileError;
+      }
+
+      console.log("[WorkerCalendar] Save completed successfully", {
+        duration: `${Date.now() - new Date(saveStartTime).getTime()}ms`,
+        availabilityRecordsSaved: availData?.length,
+        profileUpdated: true,
+      });
     },
     onSuccess: () => {
+      console.log("[WorkerCalendar] Save onSuccess callback", {
+        timestamp: new Date().toISOString(),
+        userId: workerData?.user?.id,
+      });
       queryClient.invalidateQueries({ queryKey: ["worker-calendar-data"] });
       toast.success("Availability updated");
     },
     onError: (error: Error) => {
-      console.error("Availability save error:", error);
+      console.error("[WorkerCalendar] SAVE FAILED - onError callback", {
+        timestamp: new Date().toISOString(),
+        errorName: error.name,
+        errorMessage: error.message,
+        errorStack: error.stack,
+        state: {
+          userId: workerData?.user?.id,
+          tenantId: workerData?.profile?.tenant_id,
+          isUnavailable,
+          availabilityRecordCount: Object.keys(availability).length,
+          availabilityData: availability,
+        }
+      });
       toast.error(error.message || "Failed to update availability");
     },
   });
